@@ -1,6 +1,6 @@
 // src/api/prompts.ts
-import { seedPrompts } from '../seed/seedPrompts'
 
+// ★ ここはそのまま使う
 export type Prompt = {
   id: number
   text: string
@@ -9,26 +9,27 @@ export type Prompt = {
   created_at?: string
 }
 
+// ★ seedPrompts の import は削除
+// import { seedPrompts } from '../seed/seedPrompts'
+
 const API_BASE = 'http://localhost:3001'
 
 /**
- * バックエンドからお題一覧を取得（失敗したら seed にフォールバック）
+ * バックエンドからお題一覧を取得（APIのみ／失敗したらエラー）
  */
 export async function fetchPrompts(): Promise<Prompt[]> {
-  try {
-    const res = await fetch(`${API_BASE}/api/prompts`)
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`)
-    }
-    return (await res.json()) as Prompt[]
-  } catch (error) {
-    console.error('fetchPrompts error, falling back to seedPrompts', error)
-    return seedPrompts as Prompt[]
+  const res = await fetch(`${API_BASE}/api/prompts`)
+
+  if (!res.ok) {
+    const msg = await res.text().catch(() => '')
+    throw new Error(`Failed to fetch prompts: ${res.status} ${msg}`)
   }
+
+  return (await res.json()) as Prompt[]
 }
 
 /**
- * 新しいお題を追加する
+ * 新しいお題を追加する（ここは今までどおりでOK）
  */
 export async function createPrompt(input: {
   text: string
