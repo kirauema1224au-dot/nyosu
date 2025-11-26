@@ -1,5 +1,5 @@
 import React from "react"
-import { KeyboardEvent, useEffect, useRef } from 'react'
+import { KeyboardEvent, useRef } from 'react'
 import { useTypingStore } from '../../store/useTypingStore'
 import { validateStrict } from '../../lib/typing'
 
@@ -11,9 +11,7 @@ export function InputBox() {
   const skip = useTypingStore((s) => s.skip)
   const ref = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    ref.current?.focus()
-  }, [])
+  // フォーカスは Start ボタン押下時に制御（自動フォーカスはしない）
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -30,6 +28,7 @@ export function InputBox() {
 
   return (
     <input
+      id="typing-input"
       ref={ref}
       className="mt-3 w-full rounded border px-3 py-2 font-mono text-lg outline-none focus:ring-2 focus:ring-emerald-400"
       placeholder="Type here... (Enter to submit, Esc to skip)"

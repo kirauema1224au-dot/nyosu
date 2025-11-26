@@ -1,8 +1,9 @@
 import React, { useEffect } from "react"
 import { Header } from "./components/Header"
 import { TypingCard } from "./components/Typing/Card"
-import { HistoryChart } from "./components/HistoryChart"
+// import { HistoryChart } from "./components/HistoryChart"
 import { useTypingStore } from "./store/useTypingStore"
+// import { Game } from "./components/Game"
 
 export function App() {
   const init = useTypingStore((s) => s.init)
@@ -37,15 +38,7 @@ export function App() {
           <TypingCard />
         )}
 
-        <div className="rounded-lg border bg-white p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold">Progress</h2>
-            <span className="text-xs text-slate-500">
-              WPM (green) / Accuracy% (blue)
-            </span>
-          </div>
-          <HistoryChart data={history} />
-        </div>
+       
       </main>
     </div>
   )

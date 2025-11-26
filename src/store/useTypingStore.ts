@@ -83,7 +83,7 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
         current,
         input: "",
         mistakes: 0,
-        startedAt: performance.now(),
+        startedAt: null,
         finishedAt: null,
       })
     } catch (error) {
@@ -159,7 +159,7 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
       current: next,
       input: "",
       mistakes: 0,
-      startedAt: next ? performance.now() : null,
+      startedAt: null,
       finishedAt: null,
     })
   },
