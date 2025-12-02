@@ -4,7 +4,7 @@ export function HUD() {
   const mistakes = useTypingStore((s) => s.mistakes)
   return (
     <div className="flex gap-6 mb-3">
-      <Metric label="Mistakes" value={mistakes.toString()} />
+      <Metric label="ミス回数" value={mistakes.toString()} />
     </div>
   )
 }

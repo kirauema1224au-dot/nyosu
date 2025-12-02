@@ -31,7 +31,7 @@ export function InputBox() {
       id="typing-input"
       ref={ref}
       className="mt-3 w-full rounded border px-3 py-2 font-mono text-lg outline-none focus:ring-2 focus:ring-emerald-400"
-      placeholder="Type here... (Enter to submit, Esc to skip)"
+      placeholder="Startをボタンで開始"
       value={input}
       onChange={(e) => setInput(e.target.value)}
       onKeyDown={onKeyDown}

@@ -19,6 +19,8 @@ export function Game({ prompt, status, onTimeUp }: GameProps) {
 
   // Progress ratio for current input vs prompt length
   const input = useTypingStore((s) => s.input);
+  const timeMode = useTypingStore((s) => s.timeMode);
+  const setTimeMode = useTypingStore((s) => s.setTimeMode);
   const prog = useMemo(() => {
     const targetLen = prompt?.romaji.length ?? 0
     return progressRatio(input.length, targetLen)
@@ -35,7 +37,7 @@ export function Game({ prompt, status, onTimeUp }: GameProps) {
       return;
     }
 
-    const seconds = getTimeLimitSeconds(prompt);
+    const seconds = getTimeLimitSeconds(prompt, timeMode);
     setTimeLimit(seconds);
     setIsTimeUp(false);
 
@@ -44,7 +46,7 @@ export function Game({ prompt, status, onTimeUp }: GameProps) {
     } else {
       setRemaining(null);
     }
-  }, [prompt, status]);
+  }, [prompt, status, timeMode]);
 
   // カウントダウン処理
   useEffect(() => {
@@ -73,6 +75,29 @@ export function Game({ prompt, status, onTimeUp }: GameProps) {
 
   return (
     <div className="space-y-3">
+      {/* 難易度モード切り替え */}
+      <div className="flex items-center gap-2">
+        {([
+          { label: "EASY", mode: "easy" },
+          { label: "NORMAL", mode: "normal" },
+          { label: "HARD", mode: "hard" },
+        ] as const).map((b) => {
+          const active = timeMode === b.mode
+          const base = "px-3 py-1.5 text-sm rounded border transition-colors"
+          const onClass = "bg-sky-500 text-white border-sky-500"
+          const offClass = "border-slate-300 text-slate-600 hover:bg-slate-50"
+          return (
+            <button
+              key={b.mode}
+              type="button"
+              className={`${base} ${active ? onClass : offClass}`}
+              onClick={() => setTimeMode(b.mode)}
+            >
+              {b.label}
+            </button>
+          )
+        })}
+      </div>
       {/* タイマー表示（常に制限時間は表示） */}
       {timeLimit != null && (
         <div className="space-y-1">
@@ -126,7 +151,7 @@ export function Game({ prompt, status, onTimeUp }: GameProps) {
 
       {/* お題表示 */}
       {prompt && (
-        <div className="text-xl font-bold">
+        <div className="text-xl font-bold pl-2">
           {prompt.text}
         </div>
       )}

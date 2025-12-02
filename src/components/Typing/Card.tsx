@@ -111,8 +111,8 @@ export function TypingCard() {
         </div>
       </div>
       {/* タイマー */}
-      <Game prompt={current} status={status} onTimeUp={onTimeUp} />
       <HUD />
+      <Game prompt={current} status={status} onTimeUp={onTimeUp} />
       <PromptView />
       <InputBox />
     </div>
