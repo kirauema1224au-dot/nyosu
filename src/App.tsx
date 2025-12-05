@@ -1,6 +1,7 @@
 import React, { useEffect } from "react"
 import { Header } from "./components/Header"
 import { TypingCard } from "./components/Typing/Card"
+import { Progress } from "./components/Progress"
 // import { HistoryChart } from "./components/HistoryChart"
 import { useTypingStore } from "./store/useTypingStore"
 // import { Game } from "./components/Game"
@@ -37,8 +38,8 @@ export function App() {
           // ③ お題が取れているときだけ TypingCard を表示
           <TypingCard />
         )}
-
-       
+        <Progress />
+      
       </main>
     </div>
   )

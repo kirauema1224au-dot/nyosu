@@ -5,6 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Adaptive Typing Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes successGlow {
+        0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.55); }
+        50% { box-shadow: 0 0 0 10px rgba(16,185,129,0.20); }
+        100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+      }
+      .input-glow-success {
+        animation: successGlow 600ms ease-out forwards;
+      }
+      
+      @keyframes inputShake {
+        0%, 100% { transform: translateX(0); }
+        15% { transform: translateX(-3px); }
+        30% { transform: translateX(3px); }
+        45% { transform: translateX(-3px); }
+        60% { transform: translateX(3px); }
+        75% { transform: translateX(-2px); }
+        90% { transform: translateX(2px); }
+      }
+      .input-shake {
+        animation: inputShake 420ms ease-in-out;
+        /* Tailwindの focus:ring-* が生成するリング(box-shadow)を無効化 */
+        box-shadow: none !important;
+      }
+
+      /* Session timer heartbeat (cute subtle pulse) */
+      @keyframes timerHeartbeat {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        25% { transform: scale(1.035); }
+        40% { transform: scale(1.01); }
+        60% { transform: scale(1.035); }
+        75% { transform: scale(1.01); }
+      }
+      .timer-heartbeat {
+        display: inline-block;
+        will-change: transform, opacity;
+        animation: timerHeartbeat 1200ms ease-in-out infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .input-glow-success { animation: none; }
+        .input-shake { animation: none; }
+        .timer-heartbeat { animation: none; }
+      }
+    </style>
   </head>
   <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>

@@ -4,7 +4,7 @@ import type { Prompt, RoundResult } from "../types";
 import { fetchPrompts } from "../api/prompts";
 import { validateStrict } from "../lib/typing";
 import { computeAccuracy, computeWPM } from "../lib/stats";
-import { updateDifficultyTarget } from "../lib/difficulty";
+// Target Difficulty ロジックは廃止
 
 // --- TimeMode 定義の一時的解決（本来は utils で export すべき）---
 export type TimeMode = "easy" | "normal" | "hard";
@@ -29,13 +29,23 @@ function pickRandomPrompt(
 type State = {
   prompts: Prompt[];
   current: Prompt | null;
-  difficultyTarget: number;
   input: string;
   mistakes: number;
   startedAt: number | null;
   finishedAt: number | null;
   history: RoundResult[];
   timeMode: TimeMode;
+  // Session mode (2-minute challenge)
+  sessionActive: boolean;
+  sessionStartedAt: number | null;
+  sessionEndsAt: number | null;
+  sessionDifficulty: TimeMode | null;
+  sessionStats: {
+    promptsSolved: number;
+    totalMistakes: number;
+    promptsTimedOut: number;
+    points: number;
+  };
 };
 
 type Actions = {
@@ -45,18 +55,32 @@ type Actions = {
   nextPrompt: () => void;
   skip: () => void;
   setTimeMode: (mode: TimeMode) => void;
+  // Session actions
+  startSession: (seconds: number) => void;
+  endSession: () => void;
+  // Mark current prompt as timed out (count + move next)
+  timeUpPrompt: () => void;
 };
 
 const initialState: State = {
   prompts: [],
   current: null,
-  difficultyTarget: 300,
   input: "",
   mistakes: 0,
   startedAt: null,
   finishedAt: null,
   history: [],
   timeMode: "easy",
+  sessionActive: false,
+  sessionStartedAt: null,
+  sessionEndsAt: null,
+  sessionDifficulty: null,
+  sessionStats: {
+    promptsSolved: 0,
+    totalMistakes: 0,
+    promptsTimedOut: 0,
+    points: 0,
+  },
 };
 
 // ★ ここが大事：export const useTypingStore（名前付きエクスポート）
@@ -112,22 +136,33 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
 
     const prev = input;
     const next = s;
-    const { prefixOK } = validateStrict(next, current.romaji);
 
-    let newMistakes = mistakes;
-    if (!prefixOK && next.length > prev.length) {
-      newMistakes += 1;
+    // Compute edit type
+    const isAdding = next.length > prev.length;
+    const isDeleting = next.length < prev.length;
+    const isSameLength = next.length === prev.length && next !== prev;
+
+    // For additions and same-length edits, enforce strict prefix check
+    if (isAdding || isSameLength) {
+      const { prefixOK } = validateStrict(next, current.romaji);
+      if (!prefixOK) {
+        // Count a mistake when a key is blocked (optional as per spec)
+        set({ mistakes: mistakes + 1 });
+        // Do not update input (block the change)
+        return;
+      }
     }
 
+    // If deleting or prefix check passed, apply the update
     set({
       input: next,
-      mistakes: newMistakes,
+      mistakes,
       startedAt: startedAt ?? performance.now(),
     });
   },
 
   submitIfComplete: () => {
-    const { current, input, mistakes, startedAt, difficultyTarget } = get();
+    const { current, input, mistakes, startedAt, sessionActive, sessionDifficulty } = get();
     if (!current || !startedAt) return;
 
     const { completed } = validateStrict(input, current.romaji);
@@ -137,7 +172,6 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
     const ms = finishedAt - startedAt;
     const wpm = computeWPM(input.length, ms);
     const accuracy = computeAccuracy(input.length, mistakes);
-    const nextTarget = updateDifficultyTarget(difficultyTarget, wpm, accuracy);
 
     const entry: RoundResult = {
       promptId: current.id,
@@ -148,11 +182,34 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
 
     const history = [...get().history, entry].slice(-100);
 
-    set({
-      history,
-      difficultyTarget: nextTarget,
-      finishedAt,
-    });
+    // Update session stats if active
+    if (sessionActive) {
+      const base = (() => {
+        switch (sessionDifficulty) {
+          case 'hard': return 200;
+          case 'normal': return 150;
+          case 'easy':
+          default: return 100;
+        }
+      })();
+      const bonusOrPenalty = mistakes === 0 ? 10 : -(3 * mistakes);
+      const reward = base + bonusOrPenalty;
+      set((prev) => ({
+        history,
+        finishedAt,
+        sessionStats: {
+          promptsSolved: prev.sessionStats.promptsSolved + 1,
+          totalMistakes: prev.sessionStats.totalMistakes + mistakes,
+          promptsTimedOut: prev.sessionStats.promptsTimedOut,
+          points: prev.sessionStats.points + reward,
+        },
+      }));
+    } else {
+      set({
+        history,
+        finishedAt,
+      });
+    }
 
     get().nextPrompt();
   },
@@ -174,7 +231,75 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
     get().nextPrompt();
   },
 
+  // お題の制限時間切れ時の処理：セッション統計に加算して次へ
+  timeUpPrompt: () => {
+    const { sessionActive } = get();
+    if (sessionActive) {
+      set((prev) => ({
+        sessionStats: {
+          ...prev.sessionStats,
+          promptsTimedOut: prev.sessionStats.promptsTimedOut + 1,
+        },
+      }));
+    }
+    get().nextPrompt();
+  },
+
   setTimeMode: (mode: TimeMode) => {
+    const { sessionActive } = get();
+    // セッション中は難易度変更を無効化
+    if (sessionActive) return;
     set({ timeMode: mode });
-  }
+  },
+
+  startSession: (seconds: number) => {
+    const endsAt = Date.now() + seconds * 1000;
+    const modeAtStart = get().timeMode;
+    set({
+      sessionActive: true,
+      sessionStartedAt: Date.now(),
+      sessionEndsAt: endsAt,
+      sessionDifficulty: modeAtStart,
+      sessionStats: {
+        promptsSolved: 0,
+        totalMistakes: 0,
+        promptsTimedOut: 0,
+        points: 0,
+      },
+    });
+  },
+
+  endSession: () => {
+    const { sessionActive, sessionStartedAt, sessionStats, sessionDifficulty } = get();
+    if (!sessionActive || !sessionStartedAt) {
+      set({ sessionActive: false, sessionStartedAt: null, sessionEndsAt: null, sessionDifficulty: null });
+      return;
+    }
+    const record = {
+      startedAt: sessionStartedAt,
+      endedAt: Date.now(),
+      promptsSolved: sessionStats.promptsSolved,
+      totalMistakes: sessionStats.totalMistakes,
+      sessionDifficulty: sessionDifficulty ?? 'easy',
+      promptsTimedOut: sessionStats.promptsTimedOut,
+      points: sessionStats.points,
+    };
+    try {
+      const key = 'typing:sessions';
+      const raw = localStorage.getItem(key);
+      const arr = raw ? JSON.parse(raw) as any[] : [];
+      arr.push(record);
+      // Keep last 200 records
+      const trimmed = arr.slice(-200);
+      localStorage.setItem(key, JSON.stringify(trimmed));
+      // 保存完了イベントを通知（Progressで即時反映させる）
+      try {
+        window.dispatchEvent(new CustomEvent('typing:sessions-updated', { detail: record }));
+      } catch {}
+    } catch (e) {
+      console.warn('failed to save session record', e);
+    }
+    // 終了後も直近表示用に sessionDifficulty は保持し、次回 startSession で上書きする
+    set({ sessionActive: false, sessionStartedAt: null, sessionEndsAt: null });
+  },
 }));
