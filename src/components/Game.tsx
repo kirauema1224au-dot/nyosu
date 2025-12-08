@@ -119,8 +119,8 @@ export function Game({ prompt, status, onPromptTimeUp, onSessionTimeUp }: GamePr
         ] as const).map((b) => {
           const active = timeMode === b.mode
           const base = "px-3 py-1.5 text-sm rounded border transition-colors"
-          const onClass = "bg-sky-500 text-white border-sky-500"
-          const offClass = "border-slate-300 text-slate-600 hover:bg-slate-50"
+          const onClass = "bg-cyan-600 text-white border-cyan-600 shadow-glow-cyan"
+          const offClass = "border-slate-600 text-slate-200 hover:bg-slate-800/50"
           return (
             <button
               key={b.mode}
@@ -144,15 +144,13 @@ export function Game({ prompt, status, onPromptTimeUp, onSessionTimeUp }: GamePr
       {/* お題の制限時間ゲージ（セッション中も表示） */}
       {timeLimit != null && (
         <div className="space-y-1">
-          <div className="text-sm">
+          <div className="text-sm text-slate-200">
             制限時間: {timeLimit} 秒
             {remaining != null && (
               <>
                 {" / 残り: "}
                 <span
-                  className={
-                    remaining <= 5 ? "text-red-500 font-bold" : "font-semibold"
-                  }
+                  className={remaining <= 5 ? "text-rose-400 font-bold" : "font-semibold text-slate-100"}
                 >
                   {remaining} 秒
                 </span>
@@ -160,14 +158,14 @@ export function Game({ prompt, status, onPromptTimeUp, onSessionTimeUp }: GamePr
             )}
           </div>
           {/* 残り時間ゲージ（Progress風） */}
-          <div className="relative h-2 bg-slate-200 rounded overflow-hidden">
+          <div className="relative h-2 bg-slate-800 rounded overflow-hidden">
             {(() => {
               // 右からだんだん増える（経過率）
               const ratio = remaining == null
                 ? 0
                 : Math.max(0, Math.min(1, 1 - remaining / timeLimit))
               const low = remaining != null && remaining <= Math.max(5, Math.ceil(timeLimit * 0.15))
-              const barClass = low ? "bg-red-500" : "bg-emerald-500"
+              const barClass = low ? "bg-rose-500" : "accent-bar"
               return (
                 <div
                   ref={timeBarRef}
@@ -188,10 +186,10 @@ export function Game({ prompt, status, onPromptTimeUp, onSessionTimeUp }: GamePr
       {/* Progress（タイムゲージの直下） */}
       {prompt && (
         <div className="space-y-1">
-          <div className="text-xs text-slate-600">Progress</div>
-          <div className="h-2 bg-slate-200 rounded overflow-hidden">
+          <div className="text-xs text-slate-300">Progress</div>
+          <div className="h-2 bg-slate-800 rounded overflow-hidden">
             <div
-              className="h-2 bg-emerald-500 transition-[width] duration-300"
+              className="h-2 accent-bar transition-[width] duration-300"
               style={{ width: `${prog * 100}%` }}
             />
           </div>
@@ -200,7 +198,7 @@ export function Game({ prompt, status, onPromptTimeUp, onSessionTimeUp }: GamePr
 
       {/* お題表示 */} 
       {prompt && (
-        <div className="text-xl font-bold pl-2">
+        <div className="my-3 text-3xl font-bold text-slate-100 text-center mx-auto max-w-[42ch] leading-relaxed">
           {prompt.text}
         </div>
       )}
@@ -253,11 +251,11 @@ function SessionTimer({ endsAt, onTimeUp, hidden }: { endsAt: number; onTimeUp: 
   }
   return (
     <div>
-      <div className="text-sm">
-        セッション残り: <span className={remainingSec <= 10 ? 'text-red-500 font-bold' : 'font-semibold'}>{remainingSec}</span> 秒
+      <div className="text-sm text-slate-200">
+        セッション残り: <span className={remainingSec <= 10 ? 'text-rose-400 font-bold' : 'font-semibold text-slate-100'}>{remainingSec}</span> 秒
       </div>
-      <div className="relative h-2 bg-slate-200 rounded overflow-hidden">
-        <div ref={timeBarRef} className="absolute left-0 top-0 h-2 bg-slate-900 transition-[width] duration-300" style={{ width: `${ratio * 100}%` }} />
+      <div className="relative h-2 bg-slate-800 rounded overflow-hidden">
+        <div ref={timeBarRef} className="absolute left-0 top-0 h-2 accent-bar transition-[width] duration-300" style={{ width: `${ratio * 100}%` }} />
       </div>
     </div>
   );
@@ -273,7 +271,7 @@ function SessionText({ endsAt }: { endsAt: number }) {
   const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
   const ss = String(totalSec % 60).padStart(2, '0');
   return (
-    <div className="text-3xl font-bold tabular-nums tracking-widest text-slate-800 timer-heartbeat">
+    <div className="text-3xl font-bold tabular-nums tracking-widest text-slate-100 timer-heartbeat">
       {mm}:{ss}
     </div>
   );
@@ -282,6 +280,6 @@ function SessionText({ endsAt }: { endsAt: number }) {
 function SessionPoints() {
   const points = useTypingStore((s) => s.sessionStats.points)
   return (
-    <div className="mt-1 text-sm font-semibold text-slate-700 tabular-nums">{points} pts</div>
+    <div className="mt-1 text-sm font-semibold text-slate-200 tabular-nums">{points} pts</div>
   )
 }

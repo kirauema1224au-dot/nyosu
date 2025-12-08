@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { HUD } from './HUD'
 import { PromptView } from './PromptView'
-import { InputBox } from './InputBox'
 import { useTypingStore } from '../../store/useTypingStore'
 import { Game } from "../Game"
+import { Button } from "../ui/Button"
+import { useToast } from "../ui/Toast"
 
 export function TypingCard() {
   const current = useTypingStore((s) => s.current)
@@ -93,29 +94,27 @@ export function TypingCard() {
   }, [current])
 
   // Ensure initial data is loaded
+  const { show } = useToast()
+
   if (!current) {
     return (
-      <div className="rounded-lg border bg-white p-4">
+      <div className="rounded-lg border border-slate-700 glass-surface p-4 space-y-3">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold">Practice</h2>
-          <button className="text-sm px-2 py-1 rounded bg-slate-900 text-white" onClick={() => void init()}>
-            Load Prompts
-          </button>
+          <h2 className="text-base font-semibold text-slate-100">Practice</h2>
+          <Button onClick={() => void init()}>Load Prompts</Button>
         </div>
-        <p className="text-sm text-slate-600">Click Load to initialize prompts.</p>
+        <p className="text-sm text-slate-300">Click Load to initialize prompts.</p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-lg border bg-white p-4">
+    <div className="rounded-lg border border-slate-700 glass-surface p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold">{sessionActive ? '2分チャレンジ' : 'Practice'}</h2>
+        <h2 className="text-base font-semibold text-slate-100">{sessionActive ? '2分チャレンジ' : 'Practice'}</h2>
         <div className="flex items-center gap-2">
           {!sessionActive && status !== "playing" && (
-            <button
-              className="text-sm px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5 animate-pulse"
-              onClick={() => {
+            <Button pill onClick={() => {
                 hasStartedOnceRef.current = true
                 setStarted(true)
                 // Start押下で2分セッション開始
@@ -125,30 +124,25 @@ export function TypingCard() {
                 // Start直後に入力欄へフォーカス
                 const el = document.getElementById('typing-input') as HTMLInputElement | null
                 el?.focus()
+                show({ title: 'Start', message: '2分チャレンジを開始しました', variant: 'success' })
               }}
               aria-label="Start round"
             >
-              <span className="mr-1">🎀</span>Start
-            </button>
+              <span className="mr-1">🚀</span>Start
+            </Button>
           )}
           {/* Start 2:00 ボタンは廃止 */}
-          <button
-            className="text-sm px-2 py-1 rounded border"
-            onClick={() => handleReset()}
-          >
-            Reset
-          </button>
+          <Button variant="secondary" onClick={() => { handleReset(); show({ title: 'Reset', message: 'セッションをリセットしました' }) }}>Reset</Button>
         </div>
       </div>
       {/* タイマー */}
       <HUD />
       <Game prompt={current} status={status} onPromptTimeUp={onPromptTimeUp} onSessionTimeUp={onSessionTimeUp} />
       <PromptView />
-      <InputBox />
       {/* セッション結果の簡易表示（終了後に表示） */}
       {!sessionActive && sessionStats && (sessionStats.promptsSolved > 0 || sessionStats.totalMistakes > 0) && (
-        <div className="mt-4 p-3 rounded border bg-slate-50">
-          <div className="text-sm font-semibold mb-1">直近セッション結果</div>
+        <div className="mt-4 p-3 rounded border border-slate-700 bg-slate-800/50 text-slate-200">
+          <div className="text-sm font-semibold mb-1 text-slate-100">直近セッション結果</div>
           <div className="text-sm">難易度: {labelOf(sessionDifficulty)}</div>
           <div className="text-sm">解いた数: {sessionStats.promptsSolved}</div>
           <div className="text-sm">ポイント: {sessionStats.points} pts</div>

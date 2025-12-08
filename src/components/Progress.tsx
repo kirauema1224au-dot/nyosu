@@ -129,7 +129,7 @@ export function Progress() {
   })
   return (
     <section className="mt-8">
-      <h2 className="text-base font-semibold mb-3">上達度（日別ハイスコア）</h2>
+      <h2 className="text-base font-semibold mb-3 text-slate-100">上達度（日別ハイスコア）</h2>
       <ul className="space-y-2">
         {ordered.map((d, idx) => {
           const rank = idx + 1
@@ -138,27 +138,27 @@ export function Progress() {
           return (
             <li
               key={d.dateKey}
-              className={`flex items-center justify-between gap-4 rounded-xl border bg-white px-4 py-3 hover:shadow-sm transition ${isTop ? 'border-amber-300' : ''}`}
+              className={`flex items-center justify-between gap-4 rounded-xl border border-slate-700 glass-surface px-4 py-3 hover:shadow-slate-900/40 hover:shadow-elev-1 transition ${isTop ? 'border-amber-300 shadow-glow-gold' : ''}`}
               aria-label={`${formatDateOnly(d.record.startedAt)}: ${d.points} points`}
             >
               {/* Medal badge */}
               <div className="flex items-center gap-3 min-w-[150px]">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md ${isTop ? 'bg-gradient-to-br from-amber-300 to-yellow-500 border border-yellow-300' : 'bg-gradient-to-br from-slate-400 to-slate-600'}`}>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md ${isTop ? 'bg-gradient-to-br from-amber-300 to-yellow-500 border border-yellow-300' : 'bg-gradient-to-br from-slate-500 to-slate-700'}`}>
                   {isTop ? '👑' : String(rank)}
                 </div>
-                <div className="font-semibold tabular-nums text-slate-900">{formatDateOnly(d.record.startedAt)}</div>
+                <div className="font-semibold tabular-nums text-slate-100">{formatDateOnly(d.record.startedAt)}</div>
               </div>
               {/* Middle chips */}
               <div className="flex-1">
                 <div className="flex flex-wrap gap-2">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${chipColor.bg} ${chipColor.text}`}>{labelOf(d.difficulty)}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs tabular-nums">{d.solved} solved</span>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs tabular-nums">miss {d.mistakes}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs tabular-nums">timeout {d.timeouts}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-200 text-xs tabular-nums border border-slate-700">{d.solved} solved</span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-200 text-xs tabular-nums border border-slate-700">miss {d.mistakes}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-200 text-xs tabular-nums border border-slate-700">timeout {d.timeouts}</span>
                 </div>
               </div>
               {/* Right big points */}
-              <div className={`min-w-[96px] text-right tabular-nums ${isTop ? 'text-slate-900 font-extrabold' : 'text-slate-800 font-bold'}`}>
+              <div className={`min-w-[96px] text-right tabular-nums ${isTop ? 'text-slate-100 font-extrabold' : 'text-slate-200 font-bold'}`}>
                 {d.points} <span className="text-sm align-middle">pts</span>
               </div>
             </li>
@@ -201,12 +201,12 @@ function labelOf(mode: 'easy' | 'normal' | 'hard' | null | undefined) {
 function colorOf(mode: 'easy' | 'normal' | 'hard' | null | undefined) {
   switch (mode) {
     case 'easy':
-      return { bg: 'bg-emerald-100', text: 'text-emerald-700' }
+      return { bg: 'bg-emerald-200/20 border border-emerald-300/40', text: 'text-emerald-200' }
     case 'normal':
-      return { bg: 'bg-sky-100', text: 'text-sky-700' }
+      return { bg: 'bg-sky-200/20 border border-sky-300/40', text: 'text-sky-200' }
     case 'hard':
-      return { bg: 'bg-rose-100', text: 'text-rose-700' }
+      return { bg: 'bg-rose-200/20 border border-rose-300/40', text: 'text-rose-200' }
     default:
-      return { bg: 'bg-slate-100', text: 'text-slate-700' }
+      return { bg: 'bg-slate-200/20 border border-slate-300/30', text: 'text-slate-200' }
   }
 }

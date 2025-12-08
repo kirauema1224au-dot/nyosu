@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import type { Prompt, RoundResult } from "../types";
 import { fetchPrompts } from "../api/prompts";
-import { validateStrict } from "../lib/typing";
+import { validateStrict, isAcceptedRomaji, prefixOKVariants } from "../lib/typing";
 import { computeAccuracy, computeWPM } from "../lib/stats";
 // Target Difficulty ロジックは廃止
 
@@ -142,9 +142,9 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
     const isDeleting = next.length < prev.length;
     const isSameLength = next.length === prev.length && next !== prev;
 
-    // For additions and same-length edits, enforce strict prefix check
+    // For additions and same-length edits, enforce variant-aware prefix check
     if (isAdding || isSameLength) {
-      const { prefixOK } = validateStrict(next, current.romaji);
+      const prefixOK = prefixOKVariants(next, current.romaji);
       if (!prefixOK) {
         // Count a mistake when a key is blocked (optional as per spec)
         set({ mistakes: mistakes + 1 });
@@ -165,7 +165,7 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
     const { current, input, mistakes, startedAt, sessionActive, sessionDifficulty } = get();
     if (!current || !startedAt) return;
 
-    const { completed } = validateStrict(input, current.romaji);
+    const completed = isAcceptedRomaji(input, current.romaji);
     if (!completed) return;
 
     const finishedAt = performance.now();

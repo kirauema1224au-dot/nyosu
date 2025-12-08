@@ -31,8 +31,8 @@ function labelOf(mode: any) {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-[90px]">
-      <div className="text-xs text-slate-600">{label}</div>
-      <div className="text-lg font-semibold tabular-nums">{value}</div>
+      <div className="text-xs text-slate-300">{label}</div>
+      <div className="text-lg font-semibold tabular-nums text-slate-100">{value}</div>
     </div>
   )
 }

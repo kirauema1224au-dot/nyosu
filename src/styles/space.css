@@ -1,0 +1,128 @@
+/* Galaxy background and utility surfaces (Tailwind-friendly) */
+
+/* page background with subtle stars */
+.space-bg {
+  min-height: 100%;
+  background-image: radial-gradient(1200px 700px at 30% 0%, rgba(88,121,210,0.20), transparent 70%),
+    radial-gradient(900px 600px at 70% 100%, rgba(154,92,214,0.16), transparent 60%),
+    linear-gradient(180deg, #0D1630, #090E1A);
+  position: relative;
+}
+
+/* -------- Accent theme tokens (CSS variables) -------- */
+:root {
+  --accent-from: #06b6d4; /* cyan-500 */
+  --accent-to:   #2563eb; /* blue-600 */
+  --accent-solid: #22d3ee; /* cyan-400 */
+  --accent-ring:  rgba(56,189,248,0.45);
+  --accent-shadow: 0 0 16px rgba(56,189,248,0.45);
+}
+
+html[data-theme='cyan'] { --accent-from:#06b6d4; --accent-to:#2563eb; --accent-solid:#22d3ee; --accent-ring:rgba(56,189,248,0.45); --accent-shadow:0 0 16px rgba(56,189,248,0.45); }
+html[data-theme='blue'] { --accent-from:#3b82f6; --accent-to:#1d4ed8; --accent-solid:#60a5fa; --accent-ring:rgba(59,130,246,.45); --accent-shadow:0 0 16px rgba(59,130,246,.45); }
+html[data-theme='purple'] { --accent-from:#8b5cf6; --accent-to:#6d28d9; --accent-solid:#a78bfa; --accent-ring:rgba(167,139,250,.45); --accent-shadow:0 0 16px rgba(167,139,250,.45); }
+html[data-theme='gold'] { --accent-from:#f59e0b; --accent-to:#d97706; --accent-solid:#fbbf24; --accent-ring:rgba(251,191,36,.45); --accent-shadow:0 0 16px rgba(251,191,36,.45); }
+
+/* Accent utilities (used alongside Tailwind classes) */
+.accent-btn {
+  background-image: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+  color: #fff;
+  border: 1px solid var(--accent-from);
+  box-shadow: var(--accent-shadow);
+}
+.accent-btn:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.5), var(--accent-shadow); }
+.accent-ring { box-shadow: 0 0 0 3px var(--accent-ring); }
+.accent-bar { background: var(--accent-solid); }
+.space-bg::before,
+.space-bg::after {
+  content: "";
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+}
+.space-bg::before {
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.3) 0, transparent 1px),
+    radial-gradient(1px 1px at 80% 30%, rgba(255,255,255,0.3) 0, transparent 1px),
+    radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.3) 0, transparent 1px),
+    radial-gradient(1px 1px at 65% 60%, rgba(255,255,255,0.3) 0, transparent 1px),
+    radial-gradient(1px 1px at 25% 85%, rgba(255,255,255,0.3) 0, transparent 1px);
+  filter: drop-shadow(0 0 3px rgba(255,255,255,0.15));
+}
+.space-bg::after {
+  background-image:
+    radial-gradient(2px 2px at 30% 40%, rgba(255,255,255,0.2) 0, transparent 2px),
+    radial-gradient(2px 2px at 70% 70%, rgba(255,255,255,0.2) 0, transparent 2px);
+  opacity: .7;
+}
+
+/* glass surface helper for dark UI */
+.glass-surface {
+  background: rgba(15, 23, 42, 0.40); /* slate-900/40 */
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(8px);
+}
+
+/* improved focus ring for dark UI */
+.focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .space-bg::before, .space-bg::after { animation: none; }
+}
+
+/* -------- Low effects mode (user toggle) -------- */
+html[data-fx='off'] .space-bg::before,
+html[data-fx='off'] .space-bg::after { display: none; }
+html[data-fx='off'] .glass-surface { backdrop-filter: none; background: rgba(15,23,42,0.60); }
+html[data-fx='off'] .timer-heartbeat { animation: none !important; }
+
+/* Respect system reduced motion as default-off unless user forces on */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-fx='on']) .timer-heartbeat { animation: none !important; }
+  html:not([data-fx='on']) .space-bg::before,
+  html:not([data-fx='on']) .space-bg::after { display: none; }
+  html:not([data-fx='on']) .glass-surface { backdrop-filter: none; background: rgba(15,23,42,0.60); }
+}
+
+/* -------- Flash CTA (galaxy look) -------- */
+.flash-cta {
+  position: fixed;
+  background: linear-gradient(135deg, rgba(59,130,246,0.22), rgba(99,102,241,0.22));
+  background-size: 200% 200%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45), var(--accent-shadow);
+  transition: transform 200ms ease, box-shadow 200ms ease, background-position 2s ease;
+}
+.flash-cta:hover {
+  transform: scale(1.05);
+  background-position: 100% 0;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.55), 0 0 20px rgba(167,139,250,0.35);
+}
+.flash-cta::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 14px;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.45) 0, transparent 1px),
+    radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,0.35) 0, transparent 1px),
+    radial-gradient(2px 2px at 40% 80%, rgba(255,255,255,0.25) 0, transparent 2px);
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.2));
+  animation: flashStars 6s linear infinite;
+}
+
+@keyframes flashStars {
+  0% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(-2px); opacity: .95; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flash-cta { transition: none; background-position: 0 0; }
+  .flash-cta:hover { transform: none; }
+  .flash-cta::before { animation: none; }
+}
+
+html[data-fx='off'] .flash-cta { background: rgba(51,65,85,0.6); box-shadow: 0 10px 30px rgba(0,0,0,0.45); }
+html[data-fx='off'] .flash-cta::before { display: none; }
