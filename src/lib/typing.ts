@@ -48,11 +48,12 @@ export function generateRomajiVariants(s: string, cap = 256): string[] {
     { pat: 'ja',  alts: ['ja','jya','zya'] },
     { pat: 'ju',  alts: ['ju','jyu','zyu'] },
     { pat: 'jo',  alts: ['jo','jyo','zyo'] },
-    { pat: 'shi', alts: ['shi','si','she'] },
-    { pat: 'chi', alts: ['chi','ti','ci','che'] },
+    { pat: 'shi', alts: ['shi','si'] },
+    { pat: 'chi', alts: ['chi','ti','ci'] },
     { pat: 'tsu', alts: ['tsu','tu'] },
     { pat: 'ji',  alts: ['ji','zi'] },
     { pat: 'fu',  alts: ['fu','hu'] },
+    { pat: 'zzi', alts: ['jji'] },
   ]
   const out: string[] = []
   const memo = new Map<string, string[]>()

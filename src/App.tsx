@@ -10,6 +10,8 @@ import { Modal } from './components/ui/Modal'
 import { Button } from './components/ui/Button'
 import { SideFlashButton } from './components/SideFlashButton'
 import { FlashGame } from './components/Flash/FlashGame'
+import { FlashGameMulti } from './components/Typing/FlashGameMulti'
+import { MultiOverlay } from './components/Multi/Overlay'
 
 function useHashRoute() {
   const [hash, setHash] = React.useState<string>(() => (typeof location !== 'undefined' ? location.hash : ''))
@@ -19,7 +21,7 @@ function useHashRoute() {
     return () => window.removeEventListener('hashchange', onChange)
   }, [])
   const route = hash.replace(/^#/, '') || 'home'
-  return route as 'home' | 'flash'
+  return route as 'home' | 'flash' | 'flash-multi' | 'multi'
 }
 
 export function App() {
@@ -41,12 +43,18 @@ export function App() {
 
   return (
     <div className="min-h-screen">
-      {route !== 'flash' && <SideFlashButton />}
-      <Header onOpenHelp={() => setHelpOpen(true)} />
+      {route !== 'flash' && route !== 'flash-multi' && route !== 'multi' && <SideFlashButton />}
+      <Header route={route} onOpenHelp={() => setHelpOpen(true)} />
       <main className="mx-auto max-w-4xl px-4 py-6 space-y-6">
         <ToastProvider>
+        <MultiOverlay />
         {route === 'flash' ? (
           <FlashGame />
+        ) : route === 'flash-multi' ? (
+          // 既存の flash-multi は Multi ロビー（Flash デフォルト）にフォールバック
+          <FlashGameMulti defaultMode="flash" />
+        ) : route === 'multi' ? (
+          <FlashGameMulti defaultMode="practice" />
         ) : (
           <>
             {isLoading ? (

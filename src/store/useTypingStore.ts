@@ -131,7 +131,7 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
   },
 
   setInput: (s: string) => {
-    const { current, input, mistakes, startedAt } = get();
+    const { current, input, startedAt } = get();
     if (!current) return;
 
     const prev = input;
@@ -146,19 +146,30 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
     if (isAdding || isSameLength) {
       const prefixOK = prefixOKVariants(next, current.romaji);
       if (!prefixOK) {
-        // Count a mistake when a key is blocked (optional as per spec)
-        set({ mistakes: mistakes + 1 });
+        // Count a mistake immediately and reflect to session total if active
+        set((prev) => ({
+          mistakes: prev.mistakes + 1,
+          ...(prev.sessionActive
+            ? {
+                sessionStats: {
+                  ...prev.sessionStats,
+                  totalMistakes: prev.sessionStats.totalMistakes + 1,
+                },
+              }
+            : {}),
+        }));
+        try { window.dispatchEvent(new Event('typing:practice-mistake')) } catch {}
         // Do not update input (block the change)
         return;
       }
     }
 
     // If deleting or prefix check passed, apply the update
-    set({
+    set((prev) => ({
       input: next,
-      mistakes,
+      mistakes: prev.mistakes,
       startedAt: startedAt ?? performance.now(),
-    });
+    }));
   },
 
   submitIfComplete: () => {
@@ -167,6 +178,8 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
 
     const completed = isAcceptedRomaji(input, current.romaji);
     if (!completed) return;
+
+    try { window.dispatchEvent(new Event('typing:practice-correct')) } catch {}
 
     const finishedAt = performance.now();
     const ms = finishedAt - startedAt;
@@ -199,7 +212,8 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
         finishedAt,
         sessionStats: {
           promptsSolved: prev.sessionStats.promptsSolved + 1,
-          totalMistakes: prev.sessionStats.totalMistakes + mistakes,
+          // totalMistakes is now updated per mistake immediately
+          totalMistakes: prev.sessionStats.totalMistakes,
           promptsTimedOut: prev.sessionStats.promptsTimedOut,
           points: prev.sessionStats.points + reward,
         },
@@ -242,6 +256,7 @@ export const useTypingStore = create<State & Actions>()((set, get) => ({
         },
       }));
     }
+    try { window.dispatchEvent(new Event('typing:practice-timeout')) } catch {}
     get().nextPrompt();
   },
 

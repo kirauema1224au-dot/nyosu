@@ -5,6 +5,7 @@ import { useTypingStore } from '../../store/useTypingStore'
 import { Game } from "../Game"
 import { Button } from "../ui/Button"
 import { useToast } from "../ui/Toast"
+import { useMultiStore } from "../../store/useMultiStore"
 
 export function TypingCard() {
   const current = useTypingStore((s) => s.current)
@@ -18,6 +19,8 @@ export function TypingCard() {
   const sessionStats = useTypingStore((s) => s.sessionStats)
   const sessionDifficulty = useTypingStore((s) => s.sessionDifficulty)
   const timeUpPrompt = useTypingStore((s) => s.timeUpPrompt)
+  const multiInRoom = useMultiStore((s) => s.isInRoom)
+  const multiMode = useMultiStore((s) => s.mode)
 
   // Local control for when the round actually starts
   const [started, setStarted] = useState(false)
@@ -113,7 +116,7 @@ export function TypingCard() {
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-semibold text-slate-100">{sessionActive ? '2分チャレンジ' : 'Practice'}</h2>
         <div className="flex items-center gap-2">
-          {!sessionActive && status !== "playing" && (
+          {!sessionActive && status !== "playing" && !(multiInRoom && multiMode === 'practice') && (
             <Button pill onClick={() => {
                 hasStartedOnceRef.current = true
                 setStarted(true)

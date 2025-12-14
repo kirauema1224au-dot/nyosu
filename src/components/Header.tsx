@@ -3,7 +3,7 @@ import React from "react"
 import { useEffect, useState } from 'react'
 import { getTheme, setTheme, Theme } from '../lib/theme'
 
-export function Header({ onOpenHelp }: { onOpenHelp?: () => void }) {
+export function Header({ onOpenHelp, route }: { onOpenHelp?: () => void, route?: 'home' | 'flash' | 'flash-multi' | 'multi' }) {
   const [theme, setThemeState] = useState<Theme>(() => getTheme())
   useEffect(() => { setTheme(theme) }, [theme])
   return (
@@ -28,6 +28,21 @@ export function Header({ onOpenHelp }: { onOpenHelp?: () => void }) {
             onClick={onOpenHelp}
           >
             使い方
+          </button>
+          {(route === 'flash' || route === 'flash-multi' || route === 'multi') && (
+            <button
+              className="inline-flex items-center rounded-md border border-slate-600 bg-slate-800/50 text-slate-200 hover:bg-slate-700/50 px-2.5 py-1.5 text-sm"
+              onClick={() => { try { location.hash = '' } catch {} }}
+            >
+              ← Practice
+            </button>
+          )}
+          <button
+            className={`inline-flex items-center rounded-md border border-slate-600 px-2.5 py-1.5 text-sm ${route==='multi' ? 'bg-slate-800/50 text-slate-400 cursor-default' : 'bg-slate-800/50 text-slate-200 hover:bg-slate-700/50'}`}
+            onClick={() => { if (route !== 'multi') { try { location.hash = '#multi' } catch {} } }}
+            aria-disabled={route==='multi'}
+          >
+            Multi
           </button>
         </div>
       </div>

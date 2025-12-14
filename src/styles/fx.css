@@ -42,3 +42,13 @@
   80% { transform: translateX(2px); }
   100% { transform: translateX(0); }
 }
+
+/* Pop-in animation for success badge */
+.animate-pop {
+  animation: pop-in 220ms ease-out both;
+}
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
