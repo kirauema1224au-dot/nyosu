@@ -25,6 +25,7 @@ export function FlashGame() {
   const [perEndsAt, setPerEndsAt] = useState<number | null>(null)
   const [showAnswerJP, setShowAnswerJP] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [showStart, setShowStart] = useState<boolean>(false)
 
   const hiddenInputRef = useRef<HTMLInputElement | null>(null)
   const timers = useRef<number[]>([])
@@ -88,11 +89,16 @@ export function FlashGame() {
     const t1 = window.setTimeout(() => setCountdown(2), 1000)
     const t2 = window.setTimeout(() => setCountdown(1), 2000)
     const t3 = window.setTimeout(() => {
+      // 1 のあとに START を短く見せてから開始
       setCountdown(null)
-      const now = Date.now()
-      setSessionEndsAt(now + SESSION_SECONDS * 1000)
-      // kick first round
-      startRound(nextPrompt())
+      setShowStart(true)
+      const tStart = window.setTimeout(() => {
+        setShowStart(false)
+        const now = Date.now()
+        setSessionEndsAt(now + SESSION_SECONDS * 1000)
+        startRound(nextPrompt())
+      }, 600)
+      timers.current.push(tStart)
     }, 3000)
     timers.current.push(t1, t2, t3)
   }
@@ -180,6 +186,21 @@ export function FlashGame() {
     }, 100)
     return () => window.clearInterval(id)
   }, [phase, perEndsAt])
+
+  // 派生値（早期returnより前に配置してHooks順序を安定化）
+  const remainingSec = useMemo(() => {
+    if (!sessionEndsAt) return 0
+    return Math.max(0, Math.ceil((sessionEndsAt - now) / 1000))
+  }, [sessionEndsAt, now])
+
+  const perRemaining = useMemo(() => {
+    if (!perEndsAt || phase !== 'hidden') return null
+    return Math.max(0, Math.ceil((perEndsAt - now) / 1000))
+  }, [perEndsAt, phase, now])
+  const perRatio = useMemo(() => {
+    if (perRemaining == null) return 0
+    return Math.max(0, Math.min(1, 1 - perRemaining / PER_PROMPT_SECONDS))
+  }, [perRemaining])
 
   const onTimeOut = () => {
     // 正解（romaji）を短く表示し、その後に次へ
@@ -323,81 +344,36 @@ export function FlashGame() {
     )
   }
 
-  const remainingSec = useMemo(() => {
-    if (!sessionEndsAt) return 0
-    return Math.max(0, Math.ceil((sessionEndsAt - now) / 1000))
-  }, [sessionEndsAt, now])
-
-  const perRemaining = useMemo(() => {
-    if (!perEndsAt || phase !== 'hidden') return null
-    return Math.max(0, Math.ceil((perEndsAt - now) / 1000))
-  }, [perEndsAt, phase, now])
-  const perRatio = useMemo(() => {
-    if (perRemaining == null) return 0
-    return Math.max(0, Math.min(1, 1 - perRemaining / PER_PROMPT_SECONDS))
-  }, [perRemaining])
-
-  // 瞬間判断では正解のローマ字は表示しない（ヒント無効）
-
-  const multiInRoom = useMultiStore((s) => s.isInRoom)
-  const multiMode = useMultiStore((s) => s.mode)
+  
 
   return (
-    <div className="rounded-lg border border-slate-700 glass-surface p-4 relative overflow-hidden">
+    <div className="rounded-lg border border-slate-700 glass-surface p-4 relative overflow-hidden min-h-[500px] flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base font-semibold text-slate-100">瞬間判断タイピング</h2>
         <div className="flex items-center gap-2">
-          {phase === 'idle' && !(multiInRoom && multiMode === 'flash') && (
+          {phase === 'idle' && (
             <button
               className="accent-btn px-4 py-2 rounded text-white"
-              onClick={startSession}
+              onClick={() => startSession()}
             >
               Start
             </button>
           )}
           <button
             className="text-sm px-3 py-1.5 rounded border border-rose-600/70 bg-rose-900/40 text-rose-100 hover:bg-rose-900/60 disabled:opacity-50"
-            onClick={() => { clearTimers(); setPhase('idle'); setSessionEndsAt(null); setCurrent(null); setInput(''); setSolved(0); setTimeouts(0); setMistakes(0); setPerEndsAt(null); setShowAnswerJP(null); setCountdown(null) }}
+            onClick={() => { clearTimers(); setPhase('idle'); setSessionEndsAt(null); setCurrent(null); setInput(''); setSolved(0); setTimeouts(0); setMistakes(0); setPerEndsAt(null); setShowAnswerJP(null); setCountdown(null); setShowStart(false) }}
             disabled={phase === 'idle'}
           >
             Reset
           </button>
         </div>
       </div>
-      {/* HUD */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className="min-w-[120px]">
-          <div className="text-xs text-slate-300">残り時間</div>
-          <div className="text-lg font-semibold tabular-nums timer-heartbeat">{fmt(remainingSec)}</div>
-        </div>
-        <div className="min-w-[120px]">
-          <div className="text-xs text-slate-300">正解数</div>
-          <div className="text-lg font-semibold tabular-nums">{solved}</div>
-        </div>
-        <div className="min-w-[120px]">
-          <div className="text-xs text-slate-300">ライフ</div>
-          <div className="text-lg font-semibold">{lifeHearts(MAX_TIMEOUTS - timeouts)}</div>
-        </div>
-        {perRemaining != null && (
-          <div className="flex-1 min-w-[220px]">
-            <div className="text-xs text-slate-300">
-              この問題: {PER_PROMPT_SECONDS} 秒 / 残り: <span className={perRemaining <= 3 ? 'text-rose-400 font-bold' : 'font-semibold text-slate-100'}>{perRemaining}</span> 秒
-            </div>
-            <div className="relative h-2 bg-slate-800 rounded overflow-hidden">
-              {(() => {
-                const low = perRemaining <= Math.max(3, Math.ceil(PER_PROMPT_SECONDS * 0.15))
-                const barClass = low ? 'bg-rose-500' : 'accent-bar'
-                return (
-                  <div
-                    ref={perTimeBarRef}
-                    className={`absolute left-0 top-0 h-2 ${barClass} transition-[width] duration-300`}
-                    style={{ width: `${perRatio * 100}%` }}
-                  />
-                )
-              })()}
-            </div>
-          </div>
-        )}
+      {/* HUD moved into card header for Card Minimal */}
+
+      <div className="flex flex-wrap items-end gap-4">
+        <Stat label="正解数" value={`${solved}`} />
+        <Stat label="ミス" value={`${mistakes}`} />
+        <Stat label="ライフ" value={lifeHearts(MAX_TIMEOUTS - timeouts)} />
       </div>
 
       {/* Start はヘッダーに移動（idle 時のみ表示） */}
@@ -468,9 +444,11 @@ export function FlashGame() {
       )}
 
       {/* Countdown overlay */}
-      {phase === 'countdown' && countdown != null && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-6xl font-extrabold text-slate-100 timer-heartbeat select-none">{countdown}</div>
+      {phase === 'countdown' && (countdown != null || showStart) && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
+          <div className="text-6xl font-extrabold timer-heartbeat select-none text-cyan-300 drop-shadow-[0_0_12px_rgba(34,230,255,0.45)]">
+            {showStart ? 'START' : countdown}
+          </div>
         </div>
       )}
     </div>

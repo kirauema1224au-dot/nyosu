@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useMultiStore } from '../../store/useMultiStore'
 import { Button } from '../ui/Button'
 import { useTypingStore } from '../../store/useTypingStore'
+import { useToast } from '../ui/Toast'
 
 export function MultiOverlay() {
   const isInRoom = useMultiStore((s) => s.isInRoom)
   const room = useMultiStore((s) => s.room)
   const mode = useMultiStore((s) => s.mode)
+  const difficulty = useMultiStore((s) => s.difficulty)
   const startAt = useMultiStore((s) => s.startAt)
   const durationSec = useMultiStore((s) => s.durationSec)
   const started = useMultiStore((s) => s.started)
@@ -14,6 +16,7 @@ export function MultiOverlay() {
   const setCollapsed = useMultiStore((s) => s.setCollapsed)
   const leaveRoom = useMultiStore((s) => s.leaveRoom)
   const sendProgress = useMultiStore((s) => s.sendProgress)
+  const { show } = useToast()
 
   // Bridge local progress to server
   const [score, setScore] = useState(0)
@@ -41,7 +44,7 @@ export function MultiOverlay() {
   const countdown = useMemo(() => {
     if (!startAt) return null
     const ms = startAt - now
-    if (ms <= -300) return null
+    if (ms <= -800) return null // Hold GO for 800ms
     if (ms > 3000) return null
     const sec = Math.ceil(ms / 1000)
     return sec > 0 ? sec : 0 // 0 => GO
@@ -54,14 +57,20 @@ export function MultiOverlay() {
     const delay = Math.max(0, startAt - Date.now())
     const id = window.setTimeout(() => {
       startOnceRef.current = true
-      if (mode === 'practice') {
+      if (mode?.startsWith('practice')) {
+        // Use difficulty from store
+        if (difficulty === 'easy' || difficulty === 'normal' || difficulty === 'hard') {
+          useTypingStore.getState().setTimeMode(difficulty)
+        } else {
+          useTypingStore.getState().setTimeMode('normal') // Fallback
+        }
         startPractice(durationSec)
       } else if (mode === 'flash') {
-        try { window.dispatchEvent(new Event('typing:flash-session-start')) } catch {}
+        try { window.dispatchEvent(new Event('typing:flash-session-start')) } catch { }
       }
     }, delay)
     return () => window.clearTimeout(id)
-  }, [started, startAt, mode, durationSec, startPractice])
+  }, [started, startAt, mode, difficulty, durationSec, startPractice])
 
   // Listen game progress events and forward totals
   useEffect(() => {
@@ -100,11 +109,33 @@ export function MultiOverlay() {
           <div className="text-xs text-slate-300">Room <span className="font-mono text-slate-100">{room.roomId}</span></div>
           <div className="flex items-center gap-2">
             {mode && <span className="px-2 py-0.5 rounded-full text-[10px] border border-slate-600 text-slate-200">{mode.toUpperCase()}</span>}
+            {difficulty && <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${difficultyStyles[difficulty] ?? difficultyStyles.normal}`}>{difficulty.toUpperCase()}</span>}
             {remainingSec != null && started && (
               <span className="text-xs font-semibold tabular-nums timer-heartbeat">{fmt(remainingSec)}</span>
             )}
             <button className="text-xs text-slate-300 hover:text-slate-100" onClick={() => setCollapsed(!collapsed)}>{collapsed ? '▢' : '▣'}</button>
-            <Button size="sm" variant="secondary" onClick={() => leaveRoom()}>Leave</Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                try {
+                  // End practice session if running (saves record and clears timers/UI)
+                  useTypingStore.getState().endSession()
+                } catch { }
+                // Reset local overlay counters
+                setScore(0); setCorrect(0); setMistakes(0); setTimeouts(0)
+                // Leave room on socket
+                leaveRoom()
+                // Navigate to home to ensure all game UIs unmount
+                try { if (location.hash !== '') location.hash = '' } catch { }
+                // Toast feedback
+                try {
+                  show({ title: 'Left Room', message: '退出し、ゲームをリセットしました。', variant: 'success' })
+                } catch { }
+              }}
+            >
+              Leave
+            </Button>
           </div>
         </div>
         {!collapsed && (
@@ -122,7 +153,7 @@ export function MultiOverlay() {
               <tbody>
                 {players.map((p, i) => (
                   <tr key={p.id} className="text-slate-100">
-                    <td className="py-0.5">{i===0 ? '👑' : i+1}</td>
+                    <td className="py-0.5">{i === 0 ? '👑' : i + 1}</td>
                     <td className="py-0.5">{p.name}</td>
                     <td className="py-0.5 text-right tabular-nums">{p.score}</td>
                     <td className="py-0.5 text-right tabular-nums">{p.correctCount}</td>
@@ -140,9 +171,18 @@ export function MultiOverlay() {
 
       {/* Big countdown overlay center */}
       {countdown != null && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
-          <div className="text-7xl font-extrabold text-slate-100 timer-heartbeat select-none">
-            {countdown === 0 ? 'GO' : countdown}
+        <div className={`fixed inset-0 z-30 flex items-center justify-center pointer-events-none transition-colors duration-300 ${countdown === 0 ? 'bg-transparent' : 'bg-black/40 backdrop-blur-sm'}`}>
+          <div
+            className={`font-extrabold select-none transition-all duration-300 ${countdown === 0
+              ? 'text-9xl text-emerald-400 animate-ping'
+              : countdown === 1
+                ? 'text-8xl text-yellow-400 animate-pulse'
+                : countdown === 2
+                  ? 'text-8xl text-amber-500 animate-pulse'
+                  : 'text-8xl text-rose-500 animate-pulse'
+              }`}
+          >
+            {countdown === 0 ? 'GO!' : countdown}
           </div>
         </div>
       )}
@@ -156,3 +196,8 @@ function fmt(sec: number) {
   return `${mm}:${ss}`
 }
 
+const difficultyStyles: { [key: string]: string } = {
+  easy: 'border border-emerald-500/50 bg-emerald-500/20 text-emerald-200',
+  normal: 'border border-sky-500/50 bg-sky-500/20 text-sky-200',
+  hard: 'border border-rose-500/50 bg-rose-500/20 text-rose-200',
+}

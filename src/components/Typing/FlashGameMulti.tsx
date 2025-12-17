@@ -19,7 +19,8 @@ export function FlashGameMulti({ defaultMode }: { defaultMode?: 'practice' | 'fl
   const isInRoom = useMultiStore((s) => s.isInRoom)
 
   // Default to practice-normal if generic practice is requested, though local state handles specific string
-  const [mode, setMode] = useState<MultiMode>(defaultMode === 'practice' ? 'practice-normal' : (defaultMode ?? 'practice-normal'));
+  const [mode, setMode] = useState<MultiMode>(defaultMode ?? 'practice');
+  const [difficulty, setDifficulty] = useState<'easy' | 'normal' | 'hard'>('normal')
   const [name, setName] = useState("");
   const [roomIdInput, setRoomIdInput] = useState("");
 
@@ -30,7 +31,7 @@ export function FlashGameMulti({ defaultMode }: { defaultMode?: 'practice' | 'fl
   useEffect(() => { multi.connect() }, [])
 
   const handleCreateRoom = () => {
-    multi.createRoom(name.trim(), mode)
+    multi.createRoom(name.trim(), mode, difficulty)
   };
 
   const handleJoinRoom = () => {
@@ -101,63 +102,40 @@ export function FlashGameMulti({ defaultMode }: { defaultMode?: 'practice' | 'fl
                 />
               </div>
 
-              <div className={`
-                    col-span-2 group relative flex flex-col items-center justify-center w-20 h-20 rounded-xl border transition-all duration-300 overflow-hidden
-                    ${mode.startsWith('practice') ? 'bg-emerald-500/10 border-emerald-500/50 shadow-[0_0_15px_rgba(0,0,0,0.2)]' : 'bg-slate-800/30 border-slate-700/50'}
-                  `}>
-                {/* Layer 1: Default View (Icon + Label + Current Difficulty) - Always visible, just dimmed on hover */}
-                <div className="flex flex-col items-center transition-all duration-300 group-hover:opacity-10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className={`w-5 h-5 ${mode.startsWith('practice') ? 'text-emerald-400' : 'text-slate-500'}`} />
-                    <span className={`text-xs font-bold uppercase tracking-wider ${mode.startsWith('practice') ? 'text-slate-200' : 'text-slate-500'}`}>Practice</span>
-                  </div>
-                  <div className="px-2 py-0.5 rounded text-[10px] bg-slate-900/40 text-slate-400 font-mono border border-slate-700/50">
-                    {mode.startsWith('practice') ? mode.split('-')[1].toUpperCase() : 'NORMAL'}
-                  </div>
+              <button
+                type="button"
+                aria-pressed={mode === 'practice'}
+                onClick={() => setMode('practice')}
+                className={`
+                    col-span-2 relative flex flex-col items-center justify-center w-28 h-28 rounded-xl border transition-all duration-200 focus:outline-none
+                    ${mode === 'practice'
+                      ? 'bg-emerald-500/10 border-emerald-400/50 ring-2 ring-emerald-500/30 shadow-[0_0_15px_rgba(0,0,0,0.2)]'
+                      : 'bg-slate-800/30 border-slate-700/50 hover:bg-slate-700/30 focus:ring-2 focus:ring-sky-500/30'}
+                  `}
+              >
+                <Shield className={`w-8 h-8 ${mode === 'practice' ? 'text-emerald-400' : 'text-slate-500'}`} />
+                <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-bold uppercase tracking-wider ${mode === 'practice' ? 'text-slate-200' : 'text-slate-400'}`}>
+                  Practice
                 </div>
-
-                {/* Layer 2: Hover Controls (Difficulty Buttons) - Pops out */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] flex items-center justify-center gap-1.5 p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto z-20">
-                  {/* Backdrop for the popout */}
-                  <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md rounded-xl border border-slate-600 shadow-2xl -z-10" />
-
-                  {(['easy', 'normal', 'hard'] as const).map((d) => {
-                    const m = `practice-${d}` as const
-                    const isActive = mode === m
-                    return (
-                      <button
-                        key={d}
-                        onClick={(e) => { e.stopPropagation(); setMode(m) }}
-                        className={`
-                               flex-1 py-1.5 text-[10px] font-bold uppercase rounded-lg border transition-all transform hover:scale-105 shadow-sm
-                               ${isActive
-                            ? d === 'hard' ? 'bg-rose-500 border-rose-400 text-white' : d === 'normal' ? 'bg-emerald-500 border-emerald-400 text-white' : 'bg-sky-500 border-sky-400 text-white'
-                            : 'bg-slate-800 border-slate-600 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
-                          }
-                             `}
-                      >
-                        {d}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+              </button>
+              
 
               <button
                 onClick={() => setMode('flash')}
                 className={`
-                        col-span-2 relative flex flex-col items-center justify-center w-20 h-20 rounded-xl border transition-all duration-200
+                        col-span-2 relative flex flex-col items-center justify-center w-28 h-28 rounded-xl border transition-all duration-200 focus:outline-none
                         ${mode === 'flash'
-                    ? 'bg-amber-500/10 border-amber-500/50 shadow-[0_0_15px_rgba(0,0,0,0.2)]'
-                    : 'bg-slate-800/30 border-slate-700/50 hover:bg-slate-700/30'
+                    ? 'bg-amber-500/10 border-amber-400/50 ring-2 ring-amber-500/30 shadow-[0_0_15px_rgba(0,0,0,0.2)]'
+                    : 'bg-slate-800/30 border-slate-700/50 hover:bg-slate-700/30 focus:ring-2 focus:ring-sky-500/30'
                   }
                       `}
               >
-                <div className="flex items-center gap-2">
-                  <Zap className={`w-5 h-5 ${mode === 'flash' ? 'text-amber-400' : 'text-slate-500'}`} />
-                  <span className={`text-xs font-bold uppercase tracking-wider ${mode === 'flash' ? 'text-slate-200' : 'text-slate-500'}`}>Flash</span>
+                <Zap className={`w-8 h-8 ${mode === 'flash' ? 'text-amber-400' : 'text-slate-500'}`} />
+                <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-bold uppercase tracking-wider ${mode === 'flash' ? 'text-slate-200' : 'text-slate-400'}`}>
+                  Flash
                 </div>
               </button>
+              
             </div>
           </div>
 
@@ -226,21 +204,53 @@ export function FlashGameMulti({ defaultMode }: { defaultMode?: 'practice' | 'fl
                   </div>
                 </div>
                 <div className="text-right">
-                  {isInRoom && !gameStarted && (
-                    <div className="animate-pulse">
-                      <Button
-                        onClick={() => { window.location.hash = mode.startsWith('practice') ? 'practice' : mode }}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-3 shadow-[0_0_20px_rgba(16,185,129,0.3)] border-none"
-                      >
-                        ENTER ROOM
-                      </Button>
+                  {isInRoom && !gameStarted ? (
+                    <div className="flex flex-col items-end gap-2">
+                      {mode === 'practice' && (
+                        <div>
+                          <div
+                            role="radiogroup"
+                            aria-label="Practice difficulty"
+                            className="inline-flex items-center gap-1 rounded-full border border-slate-600 bg-slate-900/60 p-1 shadow-sm backdrop-blur-sm"
+                          >
+                            {(['easy', 'normal', 'hard'] as const).map((d) => {
+                              const isActive = difficulty === d
+                              const activeClass = d === 'hard'
+                                ? 'bg-rose-500 border-rose-400 text-white'
+                                : d === 'normal'
+                                  ? 'bg-emerald-500 border-emerald-400 text-white'
+                                  : 'bg-sky-500 border-sky-400 text-white'
+                              return (
+                                <button
+                                  key={d}
+                                  role="radio"
+                                  aria-checked={isActive}
+                                  onClick={() => setDifficulty(d)}
+                                  className={`h-8 px-3 rounded-full text-[11px] font-bold uppercase border transition-colors focus:outline-none focus:ring-2 ${isActive ? activeClass : 'text-slate-300 border-transparent hover:bg-slate-800/40 focus:ring-slate-400/20'}`}
+                                >
+                                  {d}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      <div className="animate-pulse">
+                        <Button
+                          pill
+                          size="sm"
+                          onClick={() => { window.location.hash = mode === 'practice' ? 'practice' : mode }}
+                          className="h-8 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-[0_0_20px_rgba(16,185,129,0.3)] border-none"
+                        >
+                          ENTER ROOM
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                  {gameStarted && (
+                  ) : gameStarted ? (
                     <div className="px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold">
                       GAME IN PROGRESS
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
 

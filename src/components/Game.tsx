@@ -110,30 +110,7 @@ export function Game({ prompt, status, onPromptTimeUp, onSessionTimeUp }: GamePr
 
   return (
     <div className="space-y-3">
-      {/* 難易度モード切り替え */}
-      <div className="flex items-center gap-2">
-        {([
-          { label: "EASY", mode: "easy" },
-          { label: "NORMAL", mode: "normal" },
-          { label: "HARD", mode: "hard" },
-        ] as const).map((b) => {
-          const active = timeMode === b.mode
-          const base = "px-3 py-1.5 text-sm rounded border transition-colors"
-          const onClass = "bg-cyan-600 text-white border-cyan-600 shadow-glow-cyan"
-          const offClass = "border-slate-600 text-slate-200 hover:bg-slate-800/50"
-          return (
-            <button
-              key={b.mode}
-              type="button"
-              disabled={sessionActive}
-              className={`${base} ${active ? onClass : offClass} ${sessionActive ? 'opacity-60 cursor-not-allowed' : ''}`}
-              onClick={() => { if (!sessionActive) setTimeMode(b.mode) }}
-            >
-              {b.label}
-            </button>
-          )
-        })}
-      </div>
+      {/* Difficulty control moved to TypingCard header for unified design */}
       {/* セッションの残り時間（中央表示） */}
       {sessionActive && sessionEndsAt && (
         <div className="py-2 flex flex-col items-center justify-center">

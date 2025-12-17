@@ -16,6 +16,7 @@ type RoomState = {
   roomId: string
   isStarted: boolean
   players: Record<string, Player>
+  difficulty?: string
 }
 
 type MultiState = {
@@ -25,6 +26,7 @@ type MultiState = {
   name: string
   room: RoomState | null
   mode: MultiMode | null
+  difficulty: string | null
   started: boolean
   startAt: number | null
   durationSec: number
@@ -34,7 +36,7 @@ type MultiState = {
 type MultiActions = {
   connect: () => void
   disconnect: () => void
-  createRoom: (name: string) => void
+  createRoom: (name: string, mode: MultiMode, difficulty: string) => void
   joinRoom: (roomId: string, name: string) => void
   leaveRoom: () => void
   setMode: (m: MultiMode) => void
@@ -53,6 +55,7 @@ export const useMultiStore = create<MultiState & MultiActions>()((set, get) => (
   name: '',
   room: null,
   mode: null,
+  difficulty: null,
   started: false,
   startAt: null,
   durationSec: 120,
@@ -66,7 +69,7 @@ export const useMultiStore = create<MultiState & MultiActions>()((set, get) => (
     socket.on('connect', () => set({ connected: true }))
     socket.on('disconnect', () => set({ connected: false }))
     socket.on('room_update', (room: RoomState) => {
-      set({ room, isInRoom: true })
+      set({ room, isInRoom: true, difficulty: room.difficulty ?? null })
     })
     socket.on('game_started', () => {
       // Fallback: align local clocks with 3s countdown
@@ -78,35 +81,36 @@ export const useMultiStore = create<MultiState & MultiActions>()((set, get) => (
         if (mode === 'flash') {
           if (location.hash !== '#flash') location.hash = '#flash'
         } else {
-          if (location.hash) location.hash = ''
+          // All practice modes map to #practice
+          if (location.hash !== '#practice') location.hash = '#practice'
         }
-      } catch {}
+      } catch { }
     })
   },
 
   disconnect: () => {
     const s = get().socket
     if (s) {
-      try { s.disconnect() } catch {}
+      try { s.disconnect() } catch { }
     }
     set({ socket: null, connected: false, isInRoom: false, room: null, started: false, startAt: null })
   },
 
-  createRoom: (name: string) => {
+  createRoom: (name: string, mode: MultiMode, difficulty: string) => {
     const s = get().socket ?? (get().connect(), get().socket)
     if (!s) return
-    set({ name })
-    s.emit('create_room', { name }, (res: any) => {
+    set({ name, mode, difficulty }) // Set local mode immediately
+    s.emit('create_room', { name, mode, difficulty }, (res: any) => {
       if (res?.error) {
         console.warn(res.error)
         return
       }
       const room = res.room as RoomState
-      set({ room, isInRoom: true })
+      set({ room, isInRoom: true, difficulty: room.difficulty ?? difficulty })
       const n = get().name?.trim()
       // Auto-join as host if name is present (server may already include)
       if (n) {
-        try { s.emit('join_room', { roomId: room.roomId, name: n }) } catch {}
+        try { s.emit('join_room', { roomId: room.roomId, name: n }) } catch { }
       }
     })
   },
@@ -120,7 +124,7 @@ export const useMultiStore = create<MultiState & MultiActions>()((set, get) => (
         console.warn(res.error)
         return
       }
-      set({ room: res.room as RoomState, isInRoom: true, started: !!res.room?.isStarted })
+      set({ room: res.room as RoomState, isInRoom: true, started: !!res.room?.isStarted, difficulty: res.room?.difficulty ?? null })
     })
   },
 
@@ -128,10 +132,10 @@ export const useMultiStore = create<MultiState & MultiActions>()((set, get) => (
     const s = get().socket
     const roomId = get().room?.roomId
     if (s && roomId) {
-      try { s.emit('leave_room', { roomId }) } catch {}
+      try { s.emit('leave_room', { roomId }) } catch { }
     }
     set({ isInRoom: false, room: null, started: false, startAt: null })
-    try { if (location.hash === '#flash') location.hash = '' } catch {}
+    try { if (location.hash === '#flash') location.hash = '' } catch { }
   },
 
   setMode: (m: MultiMode) => set({ mode: m }),
@@ -160,7 +164,7 @@ export const useMultiStore = create<MultiState & MultiActions>()((set, get) => (
     const s = get().socket
     const n = name.trim()
     if (s && roomId && n) {
-      try { s.emit('join_room', { roomId, name: n }) } catch {}
+      try { s.emit('join_room', { roomId, name: n }) } catch { }
     }
   },
 }))
