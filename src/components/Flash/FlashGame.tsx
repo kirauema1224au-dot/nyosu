@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTypingStore } from '../../store/useTypingStore'
 import type { Prompt } from '../../api/prompts'
 import { isAcceptedRomaji, prefixOKVariants } from '../../lib/typing'
-import { useMultiStore } from '../../store/useMultiStore'
+import { Heart, Trophy, Zap, AlertTriangle, CheckCircle2, Timer, Keyboard } from "lucide-react"
 
 type Phase = 'idle' | 'countdown' | 'revealing' | 'hidden' | 'showing-answer' | 'finished'
 
@@ -35,15 +35,9 @@ export function FlashGame() {
   const failGlowTimerRef = useRef<number | null>(null)
   const anchorRef = useRef<HTMLDivElement | null>(null)
   const [shake, setShake] = useState(false)
-  const perTimeBarRef = useRef<HTMLDivElement | null>(null)
   const [glow, setGlow] = useState(false)
   const [failGlow, setFailGlow] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
-
-  const isIOS = useMemo(() => {
-    if (typeof navigator === 'undefined') return false
-    return /iP(ad|hone|od)/.test(navigator.userAgent)
-  }, [])
 
   // 初回ロードでお題を準備
   useEffect(() => { void init() }, [init])
@@ -82,7 +76,7 @@ export function FlashGame() {
     setGlow(false)
     setFailGlow(false)
     // iOS セーフティ: ユーザー操作起点で一度フォーカスを確立
-    try { hiddenInputRef.current?.focus({ preventScroll: true } as any) } catch {}
+    try { hiddenInputRef.current?.focus({ preventScroll: true } as any) } catch { }
     // 3-2-1 countdown
     setPhase('countdown')
     setCountdown(3)
@@ -122,8 +116,8 @@ export function FlashGame() {
       const arr = raw ? JSON.parse(raw) as any[] : []
       arr.push(record)
       localStorage.setItem(key, JSON.stringify(arr.slice(-200)))
-      try { window.dispatchEvent(new CustomEvent('typing:flash-sessions-updated', { detail: record })) } catch {}
-    } catch {}
+      try { window.dispatchEvent(new CustomEvent('typing:flash-sessions-updated', { detail: record })) } catch { }
+    } catch { }
     if (goTo === 'idle') {
       // 開始画面に戻す
       setPhase('idle')
@@ -207,7 +201,7 @@ export function FlashGame() {
     if (current) setShowAnswerJP(current.text)
     setPhase('showing-answer')
     setTimeouts((t) => t + 1)
-    try { window.dispatchEvent(new Event('typing:flash-timeout')) } catch {}
+    try { window.dispatchEvent(new Event('typing:flash-timeout')) } catch { }
     // 失敗演出（赤いシェイク）
     setFailGlow(true)
     if (failGlowTimerRef.current) window.clearTimeout(failGlowTimerRef.current)
@@ -240,7 +234,7 @@ export function FlashGame() {
         setFailGlow(true)
         if (failGlowTimerRef.current) window.clearTimeout(failGlowTimerRef.current)
         failGlowTimerRef.current = window.setTimeout(() => setFailGlow(false), 650)
-        try { window.dispatchEvent(new Event('typing:flash-mistake')) } catch {}
+        try { window.dispatchEvent(new Event('typing:flash-mistake')) } catch { }
         return // block invalid key
       }
     }
@@ -249,7 +243,7 @@ export function FlashGame() {
     // 完全一致したらアニメーションを出してから次へ
     if (isAcceptedRomaji(next, current.romaji)) {
       setSolved((s) => s + 1)
-      try { window.dispatchEvent(new Event('typing:flash-correct')) } catch {}
+      try { window.dispatchEvent(new Event('typing:flash-correct')) } catch { }
       // 成功時はグローのみ（Practice と同様）
       setGlow(true)
       if (glowTimerRef.current) window.clearTimeout(glowTimerRef.current)
@@ -263,7 +257,7 @@ export function FlashGame() {
     if (e.key === 'Enter') {
       if (current && isAcceptedRomaji(input, current.romaji)) {
         setSolved((s) => s + 1)
-        try { window.dispatchEvent(new Event('typing:flash-correct')) } catch {}
+        try { window.dispatchEvent(new Event('typing:flash-correct')) } catch { }
         setGlow(true)
         if (glowTimerRef.current) window.clearTimeout(glowTimerRef.current)
         glowTimerRef.current = window.setTimeout(() => setGlow(false), 650)
@@ -289,11 +283,11 @@ export function FlashGame() {
           if (!el) return
           // readonly が付いている可能性はあるが hidden なら解除されている
           if (typeof el.focus === 'function') {
-            ;(el as any).focus({ preventScroll: true })
+            ; (el as any).focus({ preventScroll: true })
           } else {
             el.focus()
           }
-        } catch {}
+        } catch { }
       })
       timers.current.push(raf2 as unknown as number)
     })
@@ -303,151 +297,210 @@ export function FlashGame() {
 
   if (!prompts.length) {
     return (
-      <div className="rounded-lg border border-slate-700 glass-surface p-4 text-sm text-slate-200">
-        お題を読み込み中です…（API 稼働中か確認してください）
+      <div className="rounded-lg border border-slate-700/50 glass-surface p-8 text-sm text-slate-200 text-center animate-pulse">
+        Initializing Flash System...
       </div>
     )
   }
 
   if (phase === 'finished') {
     return (
-      <div className="rounded-lg border border-slate-700 glass-surface p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold">瞬間判断タイピング（結果）</h2>
+      <div className="relative rounded-2xl border border-slate-700/50 bg-slate-900/80 backdrop-blur-xl p-8 space-y-8 animate-in fade-in zoom-in duration-300 overflow-hidden shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent pointer-events-none" />
+
+        <div className="flex items-center justify-between relative z-10">
+          <h2 className="text-2xl font-black italic tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-400 drop-shadow-sm flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-amber-400" />
+            MISSION REPORT
+          </h2>
           <button
-            className="text-sm px-3 py-1.5 rounded border border-slate-600 bg-slate-800/60 hover:bg-slate-700/60"
-            onClick={() => { try { location.hash = '' } catch {} }}
+            className="text-xs font-bold px-4 py-2 rounded-full border border-slate-600 bg-slate-800/40 hover:bg-slate-700/60 transition-colors text-slate-400 uppercase tracking-widest"
+            onClick={() => { try { location.hash = '' } catch { } }}
           >
-            ← Practice に戻る
+            Exit
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-3 text-slate-100">
-          <Stat label="正解数" value={String(solved)} />
-          <Stat label="タイムアウト" value={`${timeouts}/${MAX_TIMEOUTS}`} />
-          <Stat label="スコア" value={`${solved * 100} pts`} />
+
+        <div className="grid grid-cols-3 gap-4 relative z-10">
+          <StatCard label="SCORE" value={solved * 100} icon={<Zap className="w-4 h-4 text-amber-400" />} />
+          <StatCard label="SOLVED" value={solved} icon={<CheckCircle2 className="w-4 h-4 text-emerald-400" />} />
+          <StatCard label="MISS" value={mistakes} icon={<AlertTriangle className="w-4 h-4 text-rose-400" />} />
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex gap-3 justify-center relative z-10 pt-4">
           <button
-            className="accent-btn px-4 py-2 rounded"
+            className="px-8 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold shadow-lg shadow-amber-900/20 transform hover:-translate-y-0.5 transition-all w-full sm:w-auto"
             onClick={() => { setPhase('idle'); setSessionEndsAt(null); startSession() }}
           >
-            もう一度
-          </button>
-          <button
-            className="px-4 py-2 rounded border border-slate-600 bg-slate-800/60 hover:bg-slate-700/60"
-            onClick={() => { try { location.hash = '' } catch {} }}
-          >
-            Practice に戻る
+            RETRY MISSION
           </button>
         </div>
       </div>
     )
   }
 
-  
-
   return (
-    <div className="rounded-lg border border-slate-700 glass-surface p-4 relative overflow-hidden min-h-[500px] flex flex-col">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-semibold text-slate-100">瞬間判断タイピング</h2>
-        <div className="flex items-center gap-2">
+    <div className="relative rounded-2xl border border-slate-700/50 bg-slate-900/60 backdrop-blur-xl p-6 overflow-hidden min-h-[500px] flex flex-col shadow-2xl transition-all duration-500">
+      {/* Ambient Glow */}
+      <div className={`absolute top-0 right-0 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-[100px] pointer-events-none transition-opacity duration-1000 ${phase === 'idle' ? 'opacity-20' : 'opacity-40 animate-pulse-slow'}`} />
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 shadow-inner">
+            <Zap className="w-5 h-5 text-amber-400" />
+          </div>
+          <h2 className="text-xl font-bold tracking-wider text-slate-100 drop-shadow-sm">
+            FLASH <span className="text-amber-500 font-extrabold italic">BLITZ</span>
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-3">
           {phase === 'idle' && (
             <button
-              className="accent-btn px-4 py-2 rounded text-white"
+              className="px-8 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold shadow-lg shadow-amber-900/20 transform hover:scale-105 transition-all text-sm uppercase tracking-wide"
               onClick={() => startSession()}
             >
-              Start
+              Start Mission
             </button>
           )}
           <button
-            className="text-sm px-3 py-1.5 rounded border border-rose-600/70 bg-rose-900/40 text-rose-100 hover:bg-rose-900/60 disabled:opacity-50"
+            className="p-2.5 rounded-xl border border-rose-500/30 bg-rose-950/20 text-rose-400 hover:bg-rose-950/40 hover:border-rose-500/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             onClick={() => { clearTimers(); setPhase('idle'); setSessionEndsAt(null); setCurrent(null); setInput(''); setSolved(0); setTimeouts(0); setMistakes(0); setPerEndsAt(null); setShowAnswerJP(null); setCountdown(null); setShowStart(false) }}
             disabled={phase === 'idle'}
+            title="Reset Session"
           >
-            Reset
+            <AlertTriangle className="w-4 h-4" />
           </button>
         </div>
       </div>
-      {/* HUD moved into card header for Card Minimal */}
 
-      <div className="flex flex-wrap items-end gap-4">
-        <Stat label="正解数" value={`${solved}`} />
-        <Stat label="ミス" value={`${mistakes}`} />
-        <Stat label="ライフ" value={lifeHearts(MAX_TIMEOUTS - timeouts)} />
+      {/* HUD Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10 mb-8">
+        <GameStat label="SCORE" value={solved * 100} color="text-amber-400" />
+        <GameStat label="SOLVED" value={solved} color="text-emerald-400" />
+        <GameStat label="MISS" value={mistakes} color="text-rose-400" />
+
+        {/* Lives */}
+        <div className="flex flex-col justify-center px-4 py-3 rounded-xl bg-slate-950/30 border border-slate-800/50 backdrop-blur-sm">
+          <div className="text-[10px] uppercase font-bold text-slate-500 mb-1 tracking-wider">LIVES</div>
+          <div className="flex gap-1">
+            {Array.from({ length: MAX_TIMEOUTS }).map((_, i) => (
+              <Heart
+                key={i}
+                className={`w-5 h-5 transition-all duration-300 ${i < (MAX_TIMEOUTS - timeouts) ? 'fill-rose-500 text-rose-500 drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]' : 'fill-slate-800 text-slate-800'}`}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Start はヘッダーに移動（idle 時のみ表示） */}
-
+      {/* Main Gameplay Area */}
       {phase !== 'idle' && (
-        <div className="py-4">
-          {/* お題のリビール（日本語を0.5秒表示） */}
-          <div className="h-16 flex items-center justify-center">
+        <div className="flex-1 flex flex-col justify-center relative z-10 min-h-[200px]">
+
+          {/* Prompt Display */}
+          <div className="h-24 flex items-center justify-center relative perspective-500">
             {phase === 'revealing' && current && (
-              <div className="text-2xl font-bold text-slate-100 transition-opacity duration-200">{current.text}</div>
+              <div className="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-300 tracking-tight animate-in fade-in zoom-in duration-300 drop-shadow-2xl">
+                {current.text}
+              </div>
             )}
             {phase === 'showing-answer' && showAnswerJP && (
-              <div className="text-xl font-semibold text-amber-300">正解: {showAnswerJP}</div>
+              <div className="text-xl font-bold px-6 py-3 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 animate-in slide-in-from-bottom-2">
+                <span className="opacity-70 text-xs uppercase mr-2 tracking-widest">Answer:</span>
+                {showAnswerJP}
+              </div>
             )}
           </div>
 
-          {/* 入力表示（Practice風）と hidden input */}
-          <div className="flex justify-center">
+          {/* Input Area */}
+          <div className="flex justify-center mt-6 relative">
             <div
               ref={anchorRef}
-              className={`relative mx-auto w-full max-w-xl font-mono text-xl whitespace-pre-wrap break-words rounded border ${phase==='hidden' ? 'bg-white' : 'bg-slate-100'} px-3 py-3 leading-relaxed mt-3 text-center ${glow ? 'input-glow-success ring-2 ring-emerald-400' : ''} ${failGlow ? 'input-shake border-rose-600 border-2' : ''}`}
-              role="textbox"
-              aria-label="お題入力"
-              tabIndex={0}
+              className={`
+                relative w-full max-w-2xl transition-all duration-200
+                rounded-2xl border-2 backdrop-blur-md px-6 py-6 text-center font-mono text-2xl tracking-wider
+                ${phase === 'hidden' && input.length === 0 ? 'border-slate-700/50 bg-slate-900/30' : ''}
+                ${phase === 'hidden' && input.length > 0 ? 'border-sky-500/50 bg-slate-900/50 shadow-[0_0_20px_rgba(14,165,233,0.1)]' : ''}
+                ${glow ? 'border-emerald-400 bg-emerald-950/30 shadow-[0_0_40px_rgba(52,211,153,0.3)] scale-[1.02]' : ''}
+                ${failGlow ? 'border-rose-500 bg-rose-950/30 shadow-[0_0_30px_rgba(244,63,94,0.3)] animate-shake' : ''}
+                ${!glow && !failGlow && phase === 'hidden' ? 'hover:border-slate-600' : ''}
+              `}
               onClick={() => hiddenInputRef.current?.focus()}
-              onFocus={() => hiddenInputRef.current?.focus()}
             >
+              {/* Corner Accents */}
+              <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-slate-600 rounded-tl-lg opacity-50" />
+              <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-slate-600 rounded-tr-lg opacity-50" />
+              <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-slate-600 rounded-bl-lg opacity-50" />
+              <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-slate-600 rounded-br-lg opacity-50" />
+
               {glow && (
-                <div className="absolute -top-3 -right-3" aria-hidden>
-                  <div
-                    className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500 animate-pop"
-                    aria-label="お題に完全一致"
-                  >
-                    <svg
-                      className="w-4 h-4 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={3}
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
+                <div className="absolute -top-4 -right-4 z-20">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/40 animate-pop">
+                    <CheckCircle2 className="w-6 h-6 text-white" />
                   </div>
                 </div>
               )}
-              {phase === 'hidden' && input.length === 0 && isFocused ? (
-                <span className="text-slate-400 select-none">スタート！</span>
-              ) : (
-                <span className="text-slate-900">{input || ' '}</span>
+
+              {input || (
+                <span className={`transition-opacity duration-300 ${phase === 'hidden' && isFocused ? 'text-slate-500 animate-pulse' : 'text-slate-700'}`}>
+                  {phase === 'hidden' && isFocused ? 'TYPE FAST!' : '...'}
+                </span>
               )}
+
+              {/* Hidden Input */}
               <input
                 ref={hiddenInputRef}
-                className="absolute left-0 top-0 h-0 w-0 opacity-0"
+                className="absolute inset-0 opacity-0 cursor-text"
                 value={input}
                 onChange={(e) => onChange(e.target.value)}
                 onKeyDown={onKeyDown}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 readOnly={phase !== 'hidden'}
-                aria-disabled={phase !== 'hidden'}
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
               />
             </div>
           </div>
+
+          {/* Instructions */}
+          <div className="mt-4 text-center">
+            {phase === 'hidden' && (
+              <div className="text-xs text-slate-500 tracking-widest uppercase font-semibold opacity-60">
+                <Keyboard className="w-3 h-3 inline mr-1.5 relative -top-px" />
+                Instant Recall
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Countdown overlay */}
+      {/* Intro Overlay */}
+      {phase === 'idle' && (
+        <div className="flex-1 flex flex-col items-center justify-center pb-8 opacity-60">
+          <Zap className="w-16 h-16 text-slate-700 mb-4" />
+          <p className="text-slate-500 font-mono text-sm max-w-xs text-center leading-relaxed">
+            Memorize the displayed word instantly.<br />Type it after it disappears.
+          </p>
+        </div>
+      )}
+
+      {/* Countdown Overlay */}
       {phase === 'countdown' && (countdown != null || showStart) && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
-          <div className="text-6xl font-extrabold timer-heartbeat select-none text-cyan-300 drop-shadow-[0_0_12px_rgba(34,230,255,0.45)]">
-            {showStart ? 'START' : countdown}
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative">
+            {/* Ring Animation */}
+            <div className="absolute inset-0 rounded-full border-4 border-amber-500/30 animate-ping opacity-20" />
+            <div className={`
+                 -translate-x-2.5 text-8xl font-black italic tracking-tighter
+                 ${showStart ? 'text-emerald-400 scale-110 drop-shadow-[0_0_40px_rgba(52,211,153,0.6)]' : 'text-amber-400 drop-shadow-[0_0_30px_rgba(245,158,11,0.5)]'}
+                 animate-in zoom-in slide-in-from-bottom-5 duration-300
+              `}>
+              {showStart ? 'GO!' : countdown}
+            </div>
           </div>
         </div>
       )}
@@ -455,21 +508,21 @@ export function FlashGame() {
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function GameStat({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
-    <div className="min-w-[120px]">
-      <div className="text-xs text-slate-300">{label}</div>
-      <div className="text-lg font-semibold text-slate-100 tabular-nums">{value}</div>
+    <div className="flex flex-col justify-center px-4 py-3 rounded-xl bg-slate-950/30 border border-slate-800/50 backdrop-blur-sm">
+      <div className="text-[10px] uppercase font-bold text-slate-500 mb-0.5 tracking-wider">{label}</div>
+      <div className={`text-xl font-mono font-bold tracking-tight ${color} drop-shadow-sm`}>{value}</div>
     </div>
   )
 }
 
-function fmt(sec: number) {
-  const mm = String(Math.floor(sec / 60)).padStart(2, '0')
-  const ss = String(sec % 60).padStart(2, '0')
-  return `${mm}:${ss}`
-}
-
-function lifeHearts(n: number) {
-  return '❤︎'.repeat(Math.max(0, n))
+function StatCard({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 flex flex-col items-center text-center">
+      <div className="mb-2 p-2 rounded-full bg-slate-900 shadow-inner">{icon}</div>
+      <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</div>
+      <div className="text-2xl font-black text-slate-200 font-mono">{value}</div>
+    </div>
+  )
 }

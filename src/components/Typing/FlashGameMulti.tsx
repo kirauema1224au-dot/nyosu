@@ -102,40 +102,41 @@ export function FlashGameMulti({ defaultMode }: { defaultMode?: 'practice' | 'fl
                 />
               </div>
 
-              <button
-                type="button"
-                aria-pressed={mode === 'practice'}
-                onClick={() => setMode('practice')}
-                className={`
-                    col-span-2 relative flex flex-col items-center justify-center w-28 h-28 rounded-xl border transition-all duration-200 focus:outline-none
-                    ${mode === 'practice'
-                      ? 'bg-emerald-500/10 border-emerald-400/50 ring-2 ring-emerald-500/30 shadow-[0_0_15px_rgba(0,0,0,0.2)]'
-                      : 'bg-slate-800/30 border-slate-700/50 hover:bg-slate-700/30 focus:ring-2 focus:ring-sky-500/30'}
-                  `}
-              >
-                <Shield className={`w-8 h-8 ${mode === 'practice' ? 'text-emerald-400' : 'text-slate-500'}`} />
-                <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-bold uppercase tracking-wider ${mode === 'practice' ? 'text-slate-200' : 'text-slate-400'}`}>
-                  Practice
-                </div>
-              </button>
-              
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <button
+                  type="button"
+                  aria-pressed={mode === 'practice'}
+                  onClick={() => setMode('practice')}
+                  className={`
+                      col-span-2 relative flex items-center justify-center gap-2 w-28 h-28 rounded-xl border transition-all duration-500 ease-out group
+                      ${mode.startsWith('practice')
+                      ? 'bg-gradient-to-br from-emerald-500/20 to-teal-600/20 border-emerald-500/50 ring-2 ring-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.4)] scale-[1.02]'
+                      : 'bg-slate-800/30 border-slate-700/50 hover:bg-slate-700/30 hover:scale-105 hover:border-slate-600 focus:ring-2 focus:ring-sky-500/30'}
+                    `}
+                >
+                  <Shield className={`w-8 h-8 ${mode === 'practice' ? 'text-emerald-400' : 'text-slate-500'}`} />
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${mode === 'practice' ? 'text-slate-200' : 'text-slate-400'}`}>
+                    Practice
+                  </div>
+                </button>
 
-              <button
-                onClick={() => setMode('flash')}
-                className={`
-                        col-span-2 relative flex flex-col items-center justify-center w-28 h-28 rounded-xl border transition-all duration-200 focus:outline-none
-                        ${mode === 'flash'
-                    ? 'bg-amber-500/10 border-amber-400/50 ring-2 ring-amber-500/30 shadow-[0_0_15px_rgba(0,0,0,0.2)]'
-                    : 'bg-slate-800/30 border-slate-700/50 hover:bg-slate-700/30 focus:ring-2 focus:ring-sky-500/30'
-                  }
-                      `}
-              >
-                <Zap className={`w-8 h-8 ${mode === 'flash' ? 'text-amber-400' : 'text-slate-500'}`} />
-                <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 text-[11px] font-bold uppercase tracking-wider ${mode === 'flash' ? 'text-slate-200' : 'text-slate-400'}`}>
-                  Flash
-                </div>
-              </button>
-              
+                <button
+                  onClick={() => setMode('flash')}
+                  className={`
+                          col-span-2 relative flex items-center justify-center gap-2 w-28 h-28 rounded-xl border transition-all duration-500 ease-out group
+                          ${mode === 'flash'
+                      ? 'bg-gradient-to-br from-amber-500/20 to-orange-600/20 border-amber-500/50 ring-2 ring-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.4)] scale-[1.02]'
+                      : 'bg-slate-800/30 border-slate-700/50 hover:bg-slate-700/30 hover:scale-105 hover:border-slate-600 focus:ring-2 focus:ring-sky-500/30'
+                    }
+                        `}
+                >
+                  <Zap className={`w-8 h-8 ${mode === 'flash' ? 'text-amber-400' : 'text-slate-500'}`} />
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${mode === 'flash' ? 'text-slate-200' : 'text-slate-400'}`}>
+                    Flash
+                  </div>
+                </button>
+              </div>
+
             </div>
           </div>
 
