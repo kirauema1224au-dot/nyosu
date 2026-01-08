@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { Trophy, Calendar, Medal, Crown, TrendingUp, AlertCircle, Clock } from 'lucide-react'
 
 type SessionRecord = {
   startedAt: number
@@ -114,9 +115,16 @@ export function Progress() {
 
   if (!daily.length) {
     return (
-      <section className="mt-8">
-        <h2 className="text-base font-semibold mb-2">上達度（日別ハイスコア）</h2>
-        <div className="text-sm text-slate-600">まだ記録がありません。2分チャレンジを開始して結果を記録しましょう。</div>
+      <section className="mt-12 p-8 rounded-3xl border border-slate-800/50 bg-slate-900/40 text-center animate-in fade-in duration-700">
+        <div className="flex justify-center mb-4">
+          <div className="p-4 rounded-full bg-slate-800/50 border border-slate-700 ring-4 ring-slate-900/50">
+            <Trophy className="w-8 h-8 text-slate-600" />
+          </div>
+        </div>
+        <h2 className="text-xl font-bold text-slate-300 mb-2">Daily Best Records</h2>
+        <p className="text-sm text-slate-500 max-w-sm mx-auto">
+          まだ記録がありません。プレイしてあなたの成長を刻みましょう。
+        </p>
       </section>
     )
   }
@@ -127,44 +135,108 @@ export function Progress() {
     if (a.mistakes !== b.mistakes) return a.mistakes - b.mistakes
     return (a.record.endedAt ?? 0) - (b.record.endedAt ?? 0)
   })
+
   return (
-    <section className="mt-8">
-      <h2 className="text-base font-semibold mb-3 text-slate-100">上達度（日別ハイスコア）</h2>
-      <ul className="space-y-2">
+    <section className="mt-16 mb-12 relative animate-in fade-in duration-1000">
+      <div className="flex items-center gap-3 mb-6 relative z-10">
+        <div className="p-2 rounded-lg bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-amber-500/30">
+          <Trophy className="w-5 h-5 text-amber-400" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 tracking-tight drop-shadow-sm">
+            Daily Best Records
+          </h2>
+          <p className="text-xs text-slate-500 font-mono tracking-widest uppercase">Your Legend</p>
+        </div>
+      </div>
+
+      <div className="space-y-4 relative z-10">
         {ordered.map((d, idx) => {
           const rank = idx + 1
           const isTop = rank === 1
           const chipColor = colorOf(d.difficulty)
+
           return (
-            <li
+            <div
               key={d.dateKey}
-              className={`flex items-center justify-between gap-4 rounded-xl border border-slate-700 glass-surface px-4 py-3 hover:shadow-slate-900/40 hover:shadow-elev-1 transition ${isTop ? 'border-amber-300 shadow-glow-gold' : ''}`}
-              aria-label={`${formatDateOnly(d.record.startedAt)}: ${d.points} points`}
+              className={`
+                group relative flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-4 rounded-2xl border transition-all duration-500
+                ${isTop
+                  ? 'bg-gradient-to-r from-slate-900/80 via-amber-950/20 to-slate-900/80 border-amber-500/30 shadow-[0_0_30px_rgba(245,158,11,0.1)] hover:border-amber-400/50 hover:shadow-[0_0_50px_rgba(245,158,11,0.2)] scale-[1.02]'
+                  : 'bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-800/40'
+                }
+                backdrop-blur-sm animate-in slide-in-from-bottom-4 fade-in
+              `}
+              style={{ animationDelay: `${idx * 100}ms` }}
             >
-              {/* Medal badge */}
-              <div className="flex items-center gap-3 min-w-[150px]">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md ${isTop ? 'bg-gradient-to-br from-amber-300 to-yellow-500 border border-yellow-300' : 'bg-gradient-to-br from-slate-500 to-slate-700'}`}>
-                  {isTop ? '👑' : String(rank)}
+              {/* Podium/Rank Effect */}
+              {isTop && (
+                <div className="absolute -left-1 -top-1 w-8 h-8 flex items-center justify-center transform -rotate-12 z-20">
+                  <Crown className="w-8 h-8 text-amber-400 fill-amber-400/20 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)] animate-pulse-slow" />
                 </div>
-                <div className="font-semibold tabular-nums text-slate-100">{formatDateOnly(d.record.startedAt)}</div>
+              )}
+
+              {/* Rank Chip */}
+              <div className={`
+                flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl font-black text-lg border relative overflow-hidden group-hover:scale-110 transition-transform
+                ${isTop
+                  ? 'bg-gradient-to-br from-amber-400 to-yellow-600 text-white border-amber-300 shadow-lg'
+                  : 'bg-slate-800 text-slate-500 border-slate-700'
+                }
+              `}>
+                <span className="relative z-10">{rank}</span>
+                {isTop && <div className="absolute inset-0 bg-white/30 animate-shimmer" />}
               </div>
-              {/* Middle chips */}
-              <div className="flex-1">
-                <div className="flex flex-wrap gap-2">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${chipColor.bg} ${chipColor.text}`}>{labelOf(d.difficulty)}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-200 text-xs tabular-nums border border-slate-700">{d.solved} solved</span>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-200 text-xs tabular-nums border border-slate-700">miss {d.mistakes}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-200 text-xs tabular-nums border border-slate-700">timeout {d.timeouts}</span>
+
+              {/* Date & Mode */}
+              <div className="flex-1 text-center sm:text-left space-y-1">
+                <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-400 text-sm font-mono">
+                  <Calendar className="w-3.5 h-3.5 opacity-70" />
+                  {formatDateOnly(d.record.startedAt)}
+                </div>
+                <div className={`
+                  inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border shadow-sm
+                  ${chipColor.bg} ${chipColor.text}
+                `}>
+                  {labelOf(d.difficulty)} MODE
                 </div>
               </div>
-              {/* Right big points */}
-              <div className={`min-w-[96px] text-right tabular-nums ${isTop ? 'text-slate-100 font-extrabold' : 'text-slate-200 font-bold'}`}>
-                {d.points} <span className="text-sm align-middle">pts</span>
+
+              {/* Stats Grid */}
+              <div className="flex items-center gap-6 sm:gap-8 px-4 border-l border-r border-slate-800/50 mx-4 sm:mx-0">
+                <div className="text-center">
+                  <div className="text-[10px] uppercase text-slate-500 font-bold mb-0.5">Solved</div>
+                  <div className="text-sm font-mono font-bold text-slate-200">{d.solved}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[10px] uppercase text-slate-500 font-bold mb-0.5">Miss</div>
+                  <div className={`text-sm font-mono font-bold ${d.mistakes === 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {d.mistakes}
+                  </div>
+                </div>
               </div>
-            </li>
+
+              {/* Points */}
+              <div className="text-right min-w-[120px]">
+                <div className="flex flex-col items-end">
+                  <div className={`text-3xl font-black font-mono tracking-tighter tabular-nums drop-shadow-sm ${isTop ? 'text-transparent bg-clip-text bg-gradient-to-b from-white to-amber-100' : 'text-slate-200'}`}>
+                    {d.points}
+                  </div>
+                  <div className="text-[10px] uppercase font-bold tracking-widest text-slate-500 transform -translate-y-1">Points</div>
+                </div>
+              </div>
+
+              {/* Ambient Hover Light */}
+              <div
+                className={`absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none ${isTop ? 'bg-amber-500/5' : 'bg-slate-400/5'}`}
+              />
+            </div>
           )
         })}
-      </ul>
+      </div>
+
+      {/* Background Ambience */}
+      <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-full h-[300px] bg-gradient-to-b from-slate-900/0 via-amber-900/5 to-slate-900/0 blur-3xl pointer-events-none -z-10" />
     </section>
   )
 }
@@ -174,7 +246,7 @@ function formatDateOnly(ts: number) {
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}/${mm}/${dd}`
+  return `${yyyy}.${mm}.${dd}`
 }
 
 function inferDifficulty(byMode?: { easy: number; normal: number; hard: number }): 'easy' | 'normal' | 'hard' | null {
@@ -201,12 +273,12 @@ function labelOf(mode: 'easy' | 'normal' | 'hard' | null | undefined) {
 function colorOf(mode: 'easy' | 'normal' | 'hard' | null | undefined) {
   switch (mode) {
     case 'easy':
-      return { bg: 'bg-emerald-200/20 border border-emerald-300/40', text: 'text-emerald-200' }
+      return { bg: 'bg-emerald-500/10 border-emerald-500/20', text: 'text-emerald-400' }
     case 'normal':
-      return { bg: 'bg-sky-200/20 border border-sky-300/40', text: 'text-sky-200' }
+      return { bg: 'bg-cyan-500/10 border-cyan-500/20', text: 'text-cyan-400' }
     case 'hard':
-      return { bg: 'bg-rose-200/20 border border-rose-300/40', text: 'text-rose-200' }
+      return { bg: 'bg-rose-500/10 border-rose-500/20', text: 'text-rose-400' }
     default:
-      return { bg: 'bg-slate-200/20 border border-slate-300/30', text: 'text-slate-200' }
+      return { bg: 'bg-slate-500/10 border-slate-500/20', text: 'text-slate-400' }
   }
 }

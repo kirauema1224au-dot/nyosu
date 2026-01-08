@@ -21,7 +21,7 @@ export function PromptView() {
   const failGlowTimerRef = useRef<number | null>(null)
 
   const hiddenInputRef = useRef<HTMLInputElement>(null)
-  const anchorRef = useRef<HTMLDivElement>(null)
+  const anchorRef = useRef<HTMLDivElement>(null!)
 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -53,27 +53,43 @@ export function PromptView() {
   }, [])
 
   return (
-    <div className="space-y-2 flex flex-col items-center text-center">
+    <div className="space-y-4 flex flex-col items-center text-center">
       <div
         ref={anchorRef}
-        className={`relative mx-auto w-full max-w-xl font-mono text-xl whitespace-pre-wrap break-words rounded border bg-white px-3 py-3 leading-relaxed mt-3 ${glow ? 'input-glow-success ring-2 ring-emerald-400' : ''} ${failGlow ? 'input-shake border-rose-600 border-2' : ''}`}
+        className={`
+          relative mx-auto w-full max-w-2xl font-mono text-xl sm:text-2xl whitespace-pre-wrap break-words 
+          rounded-2xl border-2 px-6 py-6 leading-relaxed mt-4 transition-all duration-300
+          ${glow
+            ? 'bg-emerald-950/20 border-emerald-500/50 shadow-[0_0_40px_rgba(16,185,129,0.3)] scale-[1.01]'
+            : failGlow
+              ? 'bg-rose-950/20 border-rose-500/50 shadow-[0_0_30px_rgba(244,63,94,0.3)] animate-shake'
+              : 'bg-slate-950/30 border-slate-700/50 hover:border-slate-600'
+          }
+          backdrop-blur-md
+        `}
         role="textbox"
         aria-label="お題入力"
         tabIndex={0}
         onClick={() => hiddenInputRef.current?.focus()}
         onFocus={() => hiddenInputRef.current?.focus()}
       >
-        <span className="text-emerald-600">{correct}</span>
+        {/* Corner Accents */}
+        <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-slate-600 rounded-tl-lg opacity-30" />
+        <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-slate-600 rounded-tr-lg opacity-30" />
+        <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-slate-600 rounded-bl-lg opacity-30" />
+        <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-slate-600 rounded-br-lg opacity-30" />
+
+        <span className="text-emerald-400 drop-shadow-sm">{correct}</span>
         <span
           className={
             isMistake
-              ? 'bg-rose-100 text-rose-700 underline decoration-rose-300 underline-offset-2'
-              : 'bg-amber-100 text-amber-700'
+              ? 'bg-rose-500/20 text-rose-400 underline decoration-rose-500/50 underline-offset-4 rounded-sm px-0.5'
+              : 'bg-emerald-500/20 text-emerald-300 rounded-sm px-0.5'
           }
         >
           {next || ' '}
         </span>
-        <span className="text-slate-400">{rest}</span>
+        <span className="text-slate-600 pl-0.5">{rest}</span>
         {/* hidden but focusable input to capture typing */}
         <input
           id="typing-input"
@@ -96,6 +112,11 @@ export function PromptView() {
           spellCheck={false}
         />
         <MistakeFX anchor={anchorRef} />
+      </div>
+
+      {/* Helper text */}
+      <div className="text-xs text-slate-500 font-mono tracking-widest uppercase opacity-60">
+        Type to start
       </div>
     </div>
   )

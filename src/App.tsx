@@ -26,6 +26,7 @@ function useHashRoute() {
 }
 
 export function App() {
+  // Force HMR check
   const route = useHashRoute()
   const init = useTypingStore((s) => s.init)
   const current = useTypingStore((s) => s.current)

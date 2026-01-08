@@ -1,6 +1,7 @@
 // src/components/Game.tsx
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Clock } from "lucide-react";
 import type { Prompt } from "../api/prompts";
 import { getTimeLimitSeconds } from "../utils/timeLimit";
 import { useTypingStore } from "../store/useTypingStore";
@@ -109,44 +110,39 @@ export function Game({ prompt, status, onPromptTimeUp, onSessionTimeUp }: GamePr
   }, [isTimeUp, status, onPromptTimeUp, timeUpFired]);
 
   return (
-    <div className="space-y-3">
-      {/* Difficulty control moved to TypingCard header for unified design */}
-      {/* セッションの残り時間（中央表示） */}
+    <div className="space-y-6 w-full max-w-2xl mx-auto">
+      {/* Session Timer (Central Display) */}
       {sessionActive && sessionEndsAt && (
-        <div className="py-2 flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center justify-center -mt-2 mb-0 animate-in fade-in duration-500">
           <SessionText endsAt={sessionEndsAt} />
-          <SessionPoints />
         </div>
       )}
-      {/* お題の制限時間ゲージ（セッション中も表示） */}
+
+      {/* Timer Bar (Per Prompt) */}
       {timeLimit != null && (
-        <div className="space-y-1">
-          <div className="text-sm text-slate-200">
-            制限時間: {timeLimit} 秒
-            {remaining != null && (
-              <>
-                {" / 残り: "}
-                <span
-                  className={remaining <= 5 ? "text-rose-400 font-bold" : "font-semibold text-slate-100"}
-                >
-                  {remaining} 秒
-                </span>
-              </>
-            )}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-end px-1">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Time Limit</div>
+            <div className="text-xs font-mono font-medium text-slate-400">
+              <span className={remaining != null && remaining <= 5 ? "text-rose-400 font-bold scale-110 inline-block transition-transform" : "text-slate-300"}>
+                {remaining ?? '-'}
+              </span>
+              <span className="opacity-50 mx-1">/</span>
+              {timeLimit}s
+            </div>
           </div>
-          {/* 残り時間ゲージ（Progress風） */}
-          <div className="relative h-2 bg-slate-800 rounded overflow-hidden">
+          {/* Progress Bar Container */}
+          <div className="relative h-1.5 bg-slate-900/50 rounded-full overflow-hidden shadow-inner border border-slate-700/30">
             {(() => {
-              // 右からだんだん増える（経過率）
               const ratio = remaining == null
                 ? 0
                 : Math.max(0, Math.min(1, 1 - remaining / timeLimit))
               const low = remaining != null && remaining <= Math.max(5, Math.ceil(timeLimit * 0.15))
-              const barClass = low ? "bg-rose-500" : "accent-bar"
+              const barClass = low ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" : "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
               return (
                 <div
                   ref={timeBarRef}
-                  className={`absolute left-0 top-0 h-2 ${barClass} transition-[width] duration-300`}
+                  className={`absolute left-0 top-0 h-full ${barClass} transition-[width] duration-300 rounded-full`}
                   style={{ width: `${ratio * 100}%` }}
                 />
               )
@@ -155,34 +151,36 @@ export function Game({ prompt, status, onPromptTimeUp, onSessionTimeUp }: GamePr
         </div>
       )}
 
-      {/* セッション用タイマー（UIは非表示、ロジックのみ稼働） */}
+      {/* Session Timer Logic (Hidden UI) */}
       {sessionActive && sessionEndsAt && (
         <SessionTimer endsAt={sessionEndsAt} onTimeUp={onSessionTimeUp} hidden />
       )}
 
-      {/* Progress（タイムゲージの直下） */}
+      {/* Prompt Progress */}
       {prompt && (
-        <div className="space-y-1">
-          <div className="text-xs text-slate-300">Progress</div>
-          <div className="h-2 bg-slate-800 rounded overflow-hidden">
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-end px-1 opacity-0 hover:opacity-100 transition-opacity">
+            <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Progress</div>
+            <div className="text-[10px] font-mono text-slate-600">{(prog * 100).toFixed(0)}%</div>
+          </div>
+          <div className="relative h-1 bg-slate-900/50 rounded-full overflow-hidden">
             <div
-              className="h-2 accent-bar transition-[width] duration-300"
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-emerald-600 to-teal-400 transition-[width] duration-200 ease-out rounded-full shadow-[0_0_8px_rgba(16,185,129,0.3)]"
               style={{ width: `${prog * 100}%` }}
             />
           </div>
         </div>
       )}
 
-      {/* お題表示 */} 
+      {/* Prompt Text Display */}
       {prompt && (
-        <div className="my-3 text-3xl font-bold text-slate-100 text-center mx-auto max-w-[42ch] leading-relaxed">
-          {prompt.text}
+        <div className="py-6 relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-xl rounded-full" />
+          <div className="relative text-3xl sm:text-4xl font-extrabold text-slate-100 text-center mx-auto max-w-[42ch] leading-relaxed tracking-tight drop-shadow-md">
+            {prompt.text}
+          </div>
         </div>
       )}
-
-      {/* 時間切れメッセージは非表示に変更 */}
-
-      {/* ここに実際の入力UIをあとで組み込めばOK */}
     </div>
   );
 }
@@ -247,16 +245,31 @@ function SessionText({ endsAt }: { endsAt: number }) {
   const totalSec = Math.max(0, Math.ceil((endsAt - now) / 1000));
   const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
   const ss = String(totalSec % 60).padStart(2, '0');
+
+  // Color logic for urgency
+  const isUrgent = totalSec <= 10;
+
   return (
-    <div className="text-3xl font-bold tabular-nums tracking-widest text-slate-100 timer-heartbeat">
-      {mm}:{ss}
+    <div className={`
+      relative px-6 py-2 rounded-2xl border transition-all duration-300
+      ${isUrgent
+        ? 'bg-rose-950/40 border-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.3)] animate-pulse'
+        : 'bg-slate-900/40 border-slate-700/50 shadow-lg'
+      }
+      backdrop-blur-md flex items-center gap-3 group
+    `}>
+      <div className={`p-1.5 rounded-full ${isUrgent ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+        <Clock className="w-4 h-4" />
+      </div>
+      <div className={`text-3xl font-black tabular-nums tracking-widest font-mono ${isUrgent ? 'text-rose-400' : 'text-slate-100'} timer-heartbeat`}>
+        {mm}:{ss}
+      </div>
+
+      {/* Decorative ring */}
+      <div className={`absolute -inset-1 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity border ${isUrgent ? 'border-rose-500/20' : 'border-emerald-500/20'}`} />
     </div>
   );
 }
 
-function SessionPoints() {
-  const points = useTypingStore((s) => s.sessionStats.points)
-  return (
-    <div className="mt-1 text-sm font-semibold text-slate-200 tabular-nums">{points} pts</div>
-  )
-}
+// End of file
+
