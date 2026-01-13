@@ -14,3 +14,24 @@ export type RoundResult = {
   timestamp: number
 }
 
+export type SuddenLyricLine = {
+  startMs: number
+  endMs: number
+  text: string
+  romaji: string
+}
+
+export type SuddenVideoSearchResult = {
+  videoId: string
+  title: string
+  channelTitle: string
+  publishedAt?: string | null
+  thumbnail?: string | null
+  hasLyrics?: boolean
+}
+
+export type SuddenVideoListItem = {
+  videoId: string
+  title: string
+  hasLyrics: boolean
+}
