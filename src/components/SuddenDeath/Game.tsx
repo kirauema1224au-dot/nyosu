@@ -5,7 +5,7 @@ import { isAcceptedRomaji, prefixOKVariants, splitForHighlight } from "../../lib
 import { Button } from "../ui/Button"
 import { AlertTriangle, CheckCircle2, Loader2, Pause, Play, Skull, Volume2, VolumeX, Zap } from "lucide-react"
 
-type Phase = "idle" | "loading" | "ready" | "waiting" | "playing" | "cleared" | "dead"
+type Phase = "idle" | "loading" | "ready" | "waiting" | "countdown" | "playing" | "cleared" | "dead"
 
 const isValidVideoId = (id: string) => /^[A-Za-z0-9_-]{6,}$/.test(id.trim())
 
@@ -30,8 +30,13 @@ export function SuddenDeathGame() {
   const [mistakes, setMistakes] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [solvedCount, setSolvedCount] = useState(0)
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const [countdownActive, setCountdownActive] = useState(false)
+  const [solvedEarly, setSolvedEarly] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const playerRef = useRef<any>(null)
+  const lastTimeRef = useRef(0)
+  const lastNowRef = useRef<number | null>(null)
   const [shake, setShake] = useState(false)
   const lineSectionRef = useRef<HTMLDivElement | null>(null)
   const manualStartedRef = useRef(false)
@@ -43,16 +48,12 @@ export function SuddenDeathGame() {
     return Math.min(...lines.map((l) => l.startMs))
   }, [lines])
 
+  // Keep typing input focused when it should accept keystrokes
   useEffect(() => {
-    if (!lineSectionRef.current) return
-    if (phase === "ready" || phase === "waiting" || phase === "playing") {
-      try {
-        lineSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
-      } catch {
-        lineSectionRef.current.scrollIntoView()
-      }
+    if (phase === "playing" || phase === "waiting" || phase === "ready" || phase === "countdown") {
+      try { inputRef.current?.focus({ preventScroll: true }) } catch { }
     }
-  }, [phase])
+  }, [phase, currentIdx])
 
   useEffect(() => {
     if ((window as any).YT?.Player) {
@@ -81,7 +82,7 @@ export function SuddenDeathGame() {
     if (!playerRef.current) {
       playerRef.current = new YT.Player("sudden-player", {
         videoId,
-        playerVars: { modestbranding: 1, rel: 0 },
+        playerVars: { modestbranding: 1, rel: 0, disablekb: 1 },
         events: {
           onReady: (e: any) => {
             setPlayerReady(true)
@@ -99,6 +100,8 @@ export function SuddenDeathGame() {
                 resetState()
                 setPhase("waiting")
               }
+              // keep focus on typing input so Space goes to our handler instead of iframe
+              setTimeout(() => { try { inputRef.current?.focus({ preventScroll: true }) } catch { } }, 0)
             }
             if (state === 2) setIsPlaying(false)
           },
@@ -111,6 +114,8 @@ export function SuddenDeathGame() {
         playerRef.current.setVolume(volume * 100)
         setIsPlaying(false)
         setCurrentTime(0)
+        lastTimeRef.current = 0
+        lastNowRef.current = null
       } catch { }
     }
     return () => {
@@ -121,37 +126,113 @@ export function SuddenDeathGame() {
 
   useEffect(() => {
     if (!playerRef.current) return
-    let raf: number
-    const tick = () => {
+    let raf: number | null = null
+    let intervalId: number | null = null
+
+    const update = () => {
       try {
-        const t = playerRef.current.getCurrentTime?.() || 0
+        const now = performance.now()
+        let t = playerRef.current.getCurrentTime?.()
+        if (Number.isFinite(t)) {
+          lastTimeRef.current = t as number
+          lastNowRef.current = now
+        } else if (isPlaying && lastNowRef.current != null) {
+          const delta = (now - lastNowRef.current) / 1000
+          lastTimeRef.current = Math.max(0, lastTimeRef.current + delta)
+          lastNowRef.current = now
+          t = lastTimeRef.current
+        } else {
+          t = lastTimeRef.current
+        }
         const d = playerRef.current.getDuration?.() || 0
         setCurrentTime(t)
         setDuration(d)
         const adjusted = t * 1000 + offsetMs
-        if (phase === "waiting" && lines.length > 0 && adjusted >= firstLineStartMs) {
+
+        // Countdown trigger: start showing 3s before first line
+        if (phase === "waiting" && lines.length > 0 && !countdownActive) {
+          const remainingToFirst = firstLineStartMs - adjusted
+          if (remainingToFirst <= 3000) {
+            const nextCountdown = Math.max(0, Math.ceil(remainingToFirst / 1000))
+            setCountdown(nextCountdown)
+            setCountdownActive(true)
+            setPhase("countdown")
+            // stay in waiting; countdown effect handles transition to playing
+          }
+        }
+
+        if (phase === "countdown" && lines.length > 0) {
+          // while counting down, keep currentIdx at 0
+          setCurrentIdx(0)
+        }
+
+        if (phase === "waiting" && lines.length > 0 && adjusted >= firstLineStartMs && !countdownActive) {
           setPhase("playing")
           setCurrentIdx(0)
           setInput("")
           // wait: when first line is reached, switch to playing
         }
-        if (phase === "playing" && lines.length > 0) {
-          const idx = lines.findIndex((l) => adjusted >= l.startMs && adjusted < l.endMs)
-          if (idx >= 0 && idx !== currentIdx) {
-            setCurrentIdx(idx)
+        if ((phase === "playing" || phase === "waiting" || phase === "countdown") && lines.length > 0) {
+          // 過ぎた行をスキップし、まだ終わっていない最初の行をカレントにする
+          const nextIdx = lines.findIndex((l) => adjusted < l.endMs)
+          if (nextIdx === -1) {
+            setPhase("cleared")
+          } else if (nextIdx !== currentIdx) {
+            setSolvedEarly(false)
+            setCurrentIdx(nextIdx)
             setInput("")
           }
-          if (adjusted >= lines[lines.length - 1].endMs) setPhase("cleared")
-        } else if (phase === "waiting" && lines.length > 0 && adjusted > lines[lines.length - 1].endMs) {
-          // 再生が進みすぎている場合はクリア扱いにして止める
-          setPhase("cleared")
         }
       } catch { }
+    }
+
+    const tick = () => {
+      update()
       raf = requestAnimationFrame(tick)
     }
+
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [phase, lines, currentIdx, offsetMs, firstLineStartMs])
+    // 背景タブやウィンドウ非アクティブで rAF が絞られた場合のフォールバック
+    intervalId = window.setInterval(update, 400)
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      if (intervalId) window.clearInterval(intervalId)
+    }
+  }, [phase, lines, currentIdx, offsetMs, firstLineStartMs, isPlaying, countdownActive])
+
+  // Countdown before first line (start showing ~3s before first line)
+  useEffect(() => {
+    if (!countdownActive) return
+    if (countdown == null) return
+    if (countdown <= 0) {
+      const startSec = firstLineStartMs / 1000
+      if (!Number.isFinite(startSec)) {
+        setCountdown(null)
+        setCountdownActive(false)
+        setPhase("playing")
+        return
+      }
+      try {
+        playerRef.current?.seekTo(startSec, true)
+        playerRef.current?.playVideo()
+        setIsPlaying(true)
+        setCurrentTime(startSec)
+      } catch { }
+      manualStartedRef.current = true
+      setPhase("playing")
+      setCurrentIdx(0)
+      setInput("")
+      setCountdown(null)
+      setCountdownActive(false)
+      setSolvedEarly(false)
+      return
+    }
+    const id = window.setTimeout(() => {
+      setCountdown((c) => (c == null ? null : c - 1))
+    }, 1000)
+    return () => window.clearTimeout(id)
+  }, [countdownActive, countdown, firstLineStartMs])
 
   const highlight = useMemo(() => {
     if (!currentLine) return null
@@ -163,6 +244,7 @@ export function SuddenDeathGame() {
     if (!lines.length) return
     const nextIdx = currentIdx + 1
     setInput("")
+    setSolvedEarly(false)
     if (nextIdx >= lines.length) {
       setPhase("cleared")
     } else {
@@ -194,29 +276,41 @@ export function SuddenDeathGame() {
 
   const handleReset = useCallback(() => {
     if (!lines.length) return
-    resetState()
+    resetState({ resetManualStart: true })
     setPhase("ready")
     setCurrentIdx(0)
     setInput("")
     setMistakes(0)
     setSolvedCount(0)
     setError(null)
+    setCountdown(null)
+    setCountdownActive(false)
+    setSolvedEarly(false)
     try {
       playerRef.current?.pauseVideo()
       playerRef.current?.seekTo(0, true)
       setIsPlaying(false)
       setCurrentTime(0)
+      lastTimeRef.current = 0
+      lastNowRef.current = null
     } catch { }
   }, [lines])
 
-  const resetState = (opts?: { clearLines?: boolean }) => {
+  const resetState = (opts?: { clearLines?: boolean; resetManualStart?: boolean }) => {
     if (opts?.clearLines) setLines([])
+    if (opts?.resetManualStart) manualStartedRef.current = false
+    if (opts?.resetManualStart || opts?.clearLines) {
+      lastTimeRef.current = 0
+      lastNowRef.current = null
+    }
+    setCountdown(null)
+    setCountdownActive(false)
+    setSolvedEarly(false)
     setCurrentIdx(0)
     setInput("")
     setMistakes(0)
     setSolvedCount(0)
     setError(null)
-    manualStartedRef.current = false
   }
 
   const handleFetch = async () => {
@@ -224,7 +318,7 @@ export function SuddenDeathGame() {
       setError("動画IDが不正です")
       return
     }
-    resetState({ clearLines: true })
+    resetState({ clearLines: true, resetManualStart: true })
     setPhase("loading")
     try {
       const data = await fetchSuddenLines(videoId)
@@ -270,6 +364,12 @@ export function SuddenDeathGame() {
     setIsPlaying(false)
     setCurrentTime(0)
     setDuration(0)
+    manualStartedRef.current = false
+    lastTimeRef.current = 0
+    lastNowRef.current = null
+    setCountdown(null)
+    setCountdownActive(false)
+    setSolvedEarly(false)
   }
 
   const togglePlay = () => {
@@ -300,6 +400,11 @@ export function SuddenDeathGame() {
       return
     }
     resetState()
+    lastTimeRef.current = 0
+    lastNowRef.current = null
+    setCountdown(null)
+    setCountdownActive(false)
+    setSolvedEarly(false)
     setLines(lines)
     setPhase("waiting")
     try {
@@ -319,16 +424,17 @@ export function SuddenDeathGame() {
   const handleSolved = () => {
     const nextIdx = currentIdx + 1
     setSolvedCount((c) => c + 1)
+    // Lock input until the line's time window ends
+    setSolvedEarly(true)
     setInput("")
     if (nextIdx >= lines.length) {
-      setPhase("cleared")
-    } else {
-      setCurrentIdx(nextIdx)
+      // stay on last line visually; when time passes endMs it will clear
     }
   }
 
   const handleInput = (val: string) => {
     if (!currentLine) return
+    if (solvedEarly) return
     const sanitized = val.replace(/[^a-zA-Z'\s]/g, "")
     if (phase !== "playing") {
       setInput(sanitized)
@@ -348,6 +454,7 @@ export function SuddenDeathGame() {
   const statusTag = (() => {
     switch (phase) {
       case "waiting": return { text: "READY...WAITING", color: "bg-amber-500/20 text-amber-100 border-amber-500/40" }
+      case "countdown": return { text: "COUNTDOWN", color: "bg-blue-500/20 text-blue-100 border-blue-500/40" }
       case "playing": return { text: "BEAT TYPE RUSH", color: "bg-rose-500/20 text-rose-200 border-rose-500/40" }
       case "ready": return { text: "READY", color: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40" }
       case "cleared": return { text: "CLEARED", color: "bg-sky-500/20 text-sky-200 border-sky-500/40" }
@@ -357,33 +464,48 @@ export function SuddenDeathGame() {
   })()
 
   useEffect(() => {
-    if (phase !== "playing" && phase !== "waiting") return
     const onKey = (e: KeyboardEvent) => {
       if (e.code === "Space") {
         e.preventDefault()
+        e.stopPropagation()
         if (phase === "waiting") {
           const startSec = firstLineStartMs / 1000
+          if (!Number.isFinite(startSec)) {
+            setPhase("playing")
+            setCurrentIdx(0)
+            setInput("")
+            return
+          }
           try {
+            playerRef.current?.seekTo(startSec, true)
+            setCurrentTime(startSec)
             playerRef.current?.playVideo()
-            if (Number.isFinite(startSec)) {
-              playerRef.current?.seekTo(startSec, true)
-              setCurrentTime(startSec)
-            }
+            setIsPlaying(true)
+            try { inputRef.current?.focus({ preventScroll: true }) } catch { }
           } catch { }
-          setPhase("playing")
+          manualStartedRef.current = true
+          setCountdown(3)
+          setCountdownActive(true)
+          setPhase("countdown")
           setCurrentIdx(0)
           setInput("")
           return
         }
-        handleSkipLine()
+        if (phase === "countdown") {
+          setCountdown(0)
+          return
+        }
+        if (phase === "playing") {
+          handleSkipLine()
+        }
       }
       if (phase === "playing" && e.code === "Escape") {
         e.preventDefault()
         handleSkipLine()
       }
     }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    document.addEventListener("keydown", onKey, { capture: true })
+    return () => document.removeEventListener("keydown", onKey, { capture: true } as any)
   }, [phase, handleSkipLine, firstLineStartMs])
 
   const formatTime = (t: number) => {
@@ -413,8 +535,16 @@ export function SuddenDeathGame() {
       </div>
 
       <div className="rounded-3xl border border-slate-800 bg-slate-900/70 backdrop-blur-xl p-4 md:p-6 shadow-2xl space-y-4">
-        <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-black">
-          <div id="sudden-player" className="w-full h-full" />
+        <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-black relative">
+          <div
+            id="sudden-player"
+            className="w-full h-full"
+            tabIndex={-1}
+            onClick={() => {
+              // Let player controls work; lightly refocus input so Space stays on our handler
+              setTimeout(() => { try { inputRef.current?.focus({ preventScroll: true }) } catch { } }, 0)
+            }}
+          />
         </div>
 
         <div className="space-y-3">
@@ -438,10 +568,30 @@ export function SuddenDeathGame() {
 
       <div ref={lineSectionRef} className="rounded-3xl border border-slate-800 bg-slate-900/70 p-4 md:p-6 shadow-2xl space-y-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 md:p-5 space-y-4">
-          {(phase === "playing" || phase === "ready" || phase === "waiting") && currentLine && (
-            <div className="space-y-3" onClick={() => inputRef.current?.focus()} role="presentation">
+          {(phase === "playing" || phase === "ready" || phase === "waiting" || phase === "countdown") && currentLine && (
+            <div className="space-y-3 relative" onClick={() => inputRef.current?.focus()} role="presentation">
               <p className="text-sm text-slate-400">歌詞原文</p>
-              <div className="text-2xl md:text-3xl font-bold text-slate-50 leading-tight break-words whitespace-pre-wrap">{currentLine.text}</div>
+              <div className="relative min-h-[3.25rem] md:min-h-[3.75rem] flex items-center justify-center">
+                <div className="text-2xl md:text-3xl font-bold text-slate-50 leading-tight break-words whitespace-pre-wrap text-center">
+                  {currentLine.text}
+                </div>
+                {phase === "countdown" && countdown != null && countdown > 0 && (
+                  <span
+                    className="absolute inset-0 flex items-center justify-center text-5xl md:text-6xl font-black text-blue-300 drop-shadow-[0_0_20px_rgba(96,165,250,0.45)] animate-pulse pointer-events-none"
+                    aria-live="assertive"
+                  >
+                    {countdown}
+                  </span>
+                )}
+              </div>
+              {lines[currentIdx + 1] && (
+                <div className="space-y-1" aria-live="polite">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Next</p>
+                  <p className="text-base md:text-lg text-slate-300 leading-tight break-words whitespace-pre-wrap">
+                    {lines[currentIdx + 1].text}
+                  </p>
+                </div>
+              )}
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>ラインタイマー</span>
@@ -449,16 +599,18 @@ export function SuddenDeathGame() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-[11px] font-mono text-slate-500">{formatTime(lineStartSec)}</span>
-                  <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="flex-1 h-1 bg-slate-900/70 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-emerald-400 to-rose-500 transition-[width] duration-100 ease-linear"
-                      style={{ width: `${lineProgress * 100}%` }}
+                      className={`h-full will-change-transform origin-left shadow-[0_0_10px_rgba(96,165,250,0.45)] ${solvedEarly ? "bg-slate-600" : "bg-blue-400"}`}
+                      style={{ width: "100%", transform: `scaleX(${lineProgress})`, transition: "transform 100ms linear" }}
                     />
                   </div>
                   <span className="text-[11px] font-mono text-slate-500">{formatTime(lineEndSec)}</span>
                 </div>
               </div>
-              <div className={`rounded-xl border px-3 py-3 font-mono text-base md:text-lg text-slate-200 break-words whitespace-pre-wrap ${shake ? "border-rose-500 animate-[shake_0.2s_ease-in-out] bg-slate-950/70" : "border-slate-800 bg-slate-950/70"}`}>
+              <div className={`rounded-xl border px-3 py-3 font-mono text-base md:text-lg break-words whitespace-pre-wrap ${
+                shake ? "border-rose-500 animate-[shake_0.2s_ease-in-out] bg-slate-950/70" : "border-slate-800 bg-slate-950/70"
+              } ${solvedEarly ? "opacity-60" : "text-slate-200"}`}>
                 {highlight ? (
                   <span>
                     <span className="text-emerald-300">{highlight.correct}</span>
