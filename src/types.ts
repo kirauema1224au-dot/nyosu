@@ -21,6 +21,11 @@ export type SuddenLyricLine = {
   romaji: string
 }
 
+export type SuddenCaptionsResponse = {
+  title: string | null
+  lines: SuddenLyricLine[]
+}
+
 export type SuddenVideoSearchResult = {
   videoId: string
   title: string

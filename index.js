@@ -63,32 +63,56 @@ let prompts = [
 const suddenDeathCaptions = {
   // 実際のYouTube videoIdに置き換えてください（サウシー「いつか」）
   agQ23NdBROY: [
-    { startSec: 23, endSec: 30, text: "坂道を登った先の暗がり 星が綺麗に見えるってさ", romaji: "Sakamichionobottasakinokuragarihoshigakireinimieruttesa" },
-    { startSec: 30, endSec: 37, text: "地べたに寝転んじゃう辺り あぁ君らしいなって思ったり", romaji: "Jibetaninekoronjauatariaakimirashiinatteomottari" },
-    { startSec: 37, endSec: 44, text: "時間を忘れて夢中になった 赤信号は点滅してる", romaji: "Jikanowasuretemuchuuninattaakashingohatenmetsushiteru" },
-    { startSec: 44, endSec: 51, text: "肌寒くなり始めた季節に 僕らは初めて手をつないだ", romaji: "Hadasamukunarihajimetakisetsunibokurawahajimeteteotsunaida" },
-    { startSec: 51, endSec: 58, text: "二人の物語", romaji: "Nininomonogatari" },
-    { startSec: 58, endSec: 65, text: "ふたりでひとつの傘をさしたり ブランコに乗り星を眺めたり", romaji: "Futaridehitotsunokasaosashitariburankoninorihoshionagametari" },
-    { startSec: 65, endSec: 72, text: "押しボタン式の信号機を いつも君が走って押すくだり", romaji: "Oshibotanshikinishingoukiwoitsumokimigahashitteosukudari" },
-    { startSec: 72, endSec: 79, text: "仰向けになってみた湖 宙に浮いてるみたいってさ", romaji: "Aomukeninattemitamizuumichuuniuitemitaittesa" },
-    { startSec: 79, endSec: 86, text: "はしゃいでる君とその横でさ もっとはしゃぐ僕なら", romaji: "Hashaiderukimitosonoyokodesamottohashagubokunara" },
-    { startSec: 86, endSec: 93, text: "本当に飛べるような気がしていた", romaji: "Hontounitoberuyounakigashiteita" },
-    { startSec: 93, endSec: 100, text: "ふわふわと夢心地 君の隣", romaji: "Fuwafuwatoyumegokochikiminotonari" },
-    { startSec: 100, endSec: 107, text: "君の見る景色を全部 僕のものにしてみたかったんだ", romaji: "Kiminomirukeshikiozenbubokunomononishitemitakattanda" },
-    { startSec: 107, endSec: 114, text: "あぁ", romaji: "Aa" },
-    { startSec: 114, endSec: 121, text: "君を忘れられんなあ", romaji: "Kimiowasurerarennnaa" },
-    { startSec: 121, endSec: 128, text: "当たり前に通ってたあの道 信号機は無くなるみたいです", romaji: "Atarimaenikayottetaanomichishingoukihanakunarumitaidesu" },
-    { startSec: 128, endSec: 135, text: "思い出して切なくなる気持ちも いつかは無くなるみたいです", romaji: "Omoidasitesetsunakunarukimochimoitsukahanakunarumitaidesu" },
-    { startSec: 135, endSec: 142, text: "そういえば寒い雪降る日の 田和山の無人公園でさ", romaji: "Soiebasamuiyukifuruhinotawayamanomujinkouendesa" },
-    { startSec: 142, endSec: 149, text: "震える体 暗い中 いつものように笑い合う 街灯の下で", romaji: "Furuerukaradakuraianakaitsmonoyouniwaraiaugaitounoshitade" },
-    { startSec: 149, endSec: 156, text: "僕の目に映り込んだ君が いつもよりちょっと寂しそうな気がした", romaji: "Bokunomeniutsurikondakimigaitsumoyorichottosabishisounakigashita" },
-    { startSec: 156, endSec: 163, text: "今になってさ", romaji: "Imaninattesa" },
-    { startSec: 163, endSec: 170, text: "思い出してさ", romaji: "Omoidasitesa" },
-    { startSec: 170, endSec: 177, text: "後悔じゃなにも解決しないさ", romaji: "Koukaijananimokaiketsushinaisa" },
-    { startSec: 177, endSec: 184, text: "忘れられないのは 受け入れられないのは", romaji: "Wasurerarenainohaukeirerarenainoha" },
-    { startSec: 184, endSec: 191, text: "君を思い出にできるほど僕は 強くはないから", romaji: "Kimiomoidenidekiruhodobokuhatsuyokuhanaikara" },
-    { startSec: 191, endSec: 198, text: "僕の見た景色を全部 君にも見せてやりたかったんだ", romaji: "Bokunomitakeshikiozenbukiminimomiseteyaritakattanda" },
-    { startSec: 198, endSec: 205, text: "あったかいココアを一口", romaji: "Attakaikokoaichikuchi" },
+    { startSec: 23, endSec: 30, text: "坂道を登った先の暗がり 星が綺麗に見えるってさ", romaji: "sakamitiwonobottasakinokuragarihosigakireinimieruttesa" },
+    { startSec: 30, endSec: 36, text: "地べたに寝転んじゃう辺り あぁ君らしいなって思ったり", romaji: "zibetaninekoronnjauatariaxakimirasiinatteomottari" },
+    { startSec: 36, endSec: 42, text: "時間を忘れて夢中になった 赤信号は点滅してる", romaji: "zikanwowasuretemutyuuninattaakasinngouhatennmetusiteiru" },
+    { startSec: 42, endSec: 49, text: "肌寒くなり始めた季節に 僕らは初めて手をつないだ", romaji: "hadazamukunarihazimetakisetunibokurahahazimetetewotunaida" },
+    { startSec: 49, endSec: 54, text: "二人の物語", romaji: "hutarinomonogatari" },
+    { startSec: 54, endSec: 60, text: "ふたりでひとつの傘をさしたり ブランコに乗り星を眺めたり", romaji: "hutaridehitunokasawosasitariburannkoninorihosiwonagametari" },
+    { startSec: 60, endSec: 66, text: "押しボタン式の信号機を いつも君が走って押すくだり", romaji: "osibotannsikinosinngoukiwoitumokimigahasitteosukudari" },
+    { startSec: 66, endSec: 73, text: "仰向けになってみた湖 宙に浮いてるみたいってさ", romaji: "aomukeninattemitamizuumityuuniuiterumitaittesa" },
+    { startSec: 73, endSec: 79, text: "はしゃいでる君とその横でさ もっとはしゃぐ僕なら", romaji: "hasyaideirukimitosonoyokodesamottohasyagubokunara" },
+    { startSec: 79, endSec: 85, text: "本当に飛べるような気がしていた", romaji: "honntounitoberuyounakigasiteita" },
+    { startSec: 85, endSec: 93, text: "ふわふわと夢心地 君の隣", romaji: "huwahuwatoyumegokotikiminotonari" },
+    { startSec: 93, endSec: 107, text: "君の見る景色を全部 僕のものにしてみたかったんだ", romaji: "kiminomirukesikiwozennbubokunomononisitemitakattannda" },
+    { startSec: 107, endSec: 128, text: "君を忘れられんなあ", romaji: "kimiwowasurerarennna" },
+    { startSec: 128, endSec: 135, text: "当たり前に通ってたあの道 信号機は無くなるみたいです", romaji: "atarimaenikayottetaanomitisinngoukihanakunarumitaidesu" },
+    { startSec: 135, endSec: 141, text: "思い出して切なくなる気持ちも いつかは無くなるみたいです", romaji: "omoidasitesetunakunarukimotimoitukahanakunarumitaidesu" },
+    { startSec: 141, endSec: 147, text: "そういえば寒い雪降る日の 田和山の無人公園でさ", romaji: "souiebasamuiyukihuruhinotawayamanomuzinnkouenndesa" },
+    { startSec: 147, endSec: 156, text: "震える体 暗い中 いつものように笑い合う 街灯の下で", romaji: "furuerukaradakurainakaitumonoyouniwaraiaugaitounositade" },
+    { startSec: 156, endSec: 170, text: "僕の目に映り込んだ君が いつもよりちょっと寂しそうな気がした", romaji: "bokunomeniuturikonndakimigaitumoyorityottosabisisounakigasita" },
+    { startSec: 170, endSec: 183, text: "今になってさ 思い出してさ 後悔じゃなにも解決しないさ", romaji: "imaninattesaomoidasitesakoukaizyananimokaiketusinaisa" },
+    { startSec: 183, endSec: 189, text: "忘れられないのは 受け入れられないのは", romaji: "wasurerarenainohaukeirerarenainoha" },
+    { startSec: 189, endSec: 199, text: "君を思い出にできるほど僕は 強くはないから", romaji: "kimiwoomoidenidekiruhodobokuhatuyokunaikara" },
+    { startSec: 199, endSec: 217, text: "僕の見た景色を全部 君にも見せてやりたかったんだ あったかいココアを一口", romaji: "bokunomitakesikiwozennbukiminimomiseteyaritakattanndaatatakaikokoawohitokuti" },
+    { startSec: 217, endSec: 230, text: "いつかまた逢う日までと 笑う顔に嘘は見当たらない", romaji: "itukamataauhimadetowaraukaoniuwohamiataranai" },
+    { startSec: 230, endSec: 241, text: "じゃあね じゃあね またどっか遠くで", romaji: "zyaanezyaanemtadokkatookude" },
+    { startSec: 241, endSec: 279, text: "いつか", romaji: "itsuka" },
+  ],
+
+  "YO-rXgQKlF8": [
+    { startSec: 17, endSec: 24, text: "この風は どこからきたのと", romaji: "konokazehadokokarakitanoto" },
+    { startSec: 24, endSec: 31, text: "問いかけても 空は何も言わない", romaji: "toikaketemosorahananimoiwanai" },
+    { startSec: 31, endSec: 38, text: "この歌は どこへ辿り着くの", romaji: "konoutahadokohetadoritukuno" },
+    { startSec: 38, endSec: 45, text: "見つけたいよ 自分だけの答えを", romaji: "mituketaiyozibunndakenokotaewo" },
+    { startSec: 45, endSec: 56, text: "まだ知らない海の果てへと 漕ぎ出そう", romaji: "madasiranaiuminohatehetokogidasou" },
+    { startSec: 56, endSec: 68, text: "ただひとつの夢 決して譲れない", romaji: "tadahitotunoyumekesiteyuzurenai" },
+    { startSec: 68, endSec: 77, text: "心に帆を揚げて 願いのまま進め", romaji: "kokoronihowoagetenegainomamasusume" },
+    { startSec: 77, endSec: 89, text: "いつだって あなたへ 届くように 歌うわ", romaji: "itudatteanatanitodokuyouniutauwa" },
+    { startSec: 89, endSec: 102, text: "大海原を駆ける 新しい風になれ", romaji: "oounabarawokakeruatarasiikazeninare" },
+    { startSec: 102, endSec: 110, text: "それぞれに 幸せを目指し", romaji: "sorezorenisiawasewomezasi" },
+    { startSec: 110, endSec: 117, text: "傷ついても それでも 手を伸ばすよ", romaji: "kizutuitemosoredemotewonobasuyo" },
+    { startSec: 117, endSec: 124, text: "悲しみも強さに変わるなら", romaji: "kanasimimotuyosanikawarunara" },
+    { startSec: 124, endSec: 130, text: "荒れ狂う嵐も越えていけるはず", romaji: "arekuruuarasimokoeteikeruhazu" },
+    { startSec: 130, endSec: 142, text: "信じるその旅の果てで また 会いたい", romaji: "sinnzirusnotabinohatedemataaitai" },
+    { startSec: 142, endSec: 154, text: "目覚めたまま見る夢 決して醒めはしない", romaji: "mezametamamamiruyumekesitesamehasinai" },
+    { startSec: 154, endSec: 164, text: "水平線の彼方 その影に手を振るよ", romaji: "suiheisennnokanatasonokagenitewohuruyo" },
+    { startSec: 164, endSec: 174, text: "いつまでも あなたへ 届くように 歌うわ", romaji: "itumademoanatahetodokuyouniutauwa" },
+    { startSec: 174, endSec: 210, text: "大きく広げた帆が 纏う 青い風になれ", romaji: "ookikuhirogetahogamatouaoikazeninare" },
+    { startSec: 210, endSec: 222, text: "ただひとつの夢 誰も奪えない", romaji: "tadahitotunoyumedaremoubaenai" },
+    { startSec: 222, endSec: 231, text: "私が消え去っても 歌は響き続ける", romaji: "watasigakiesattemoutahahibikitudukeru" },
+    { startSec: 231, endSec: 243, text: "どこまでも あなたへ 届くように 歌うわ", romaji: "dokomademoanatahetodokuyouniutauwa" },
+    { startSec: 243, endSec: 286, text: "大海原を駆ける 新しい風になれ", romaji: "oounabarawokakeruatarasiikazeninare" },
   ],
 }
 
@@ -107,14 +131,61 @@ app.get("/", (_req, res) => {
   res.send("Typing API server is running. Try GET /api/prompts or /api/sudden-death/captions?videoId=agQ23NdBROY")
 })
 
+const videoTitleCache = new Map()
+
+const resolveVideoTitle = async (videoId, fallbackLines) => {
+  if (!videoId) return null
+  if (videoTitleCache.has(videoId)) return videoTitleCache.get(videoId)
+  if (!YOUTUBE_API_KEY) return null
+
+  const params = new URLSearchParams({
+    key: YOUTUBE_API_KEY,
+    id: videoId,
+    part: "snippet",
+    maxResults: "1",
+  })
+  const url = `https://www.googleapis.com/youtube/v3/videos?${params.toString()}`
+
+  try {
+    const res = await fetch(url)
+    if (!res.ok) {
+      const msg = await res.text().catch(() => "")
+      throw new Error(`YouTube videos.list failed: ${res.status} ${msg}`)
+    }
+    const body = await res.json()
+    const title = body?.items?.[0]?.snippet?.title || null
+    videoTitleCache.set(videoId, title)
+    return title
+  } catch (err) {
+    console.error("YouTube title fetch failed:", err?.message || err)
+    // fallback to seed text if available
+    const fallbackTitle = Array.isArray(fallbackLines) && fallbackLines[0]?.text ? fallbackLines[0].text : null
+    if (fallbackTitle) videoTitleCache.set(videoId, fallbackTitle)
+    return fallbackTitle
+  }
+}
+
+const fallbackTitle = (videoId, lines) => (Array.isArray(lines) && lines[0]?.text) || videoId
+
 // GET /api/sudden-death/list : 歌詞付き動画の一覧を返す
-app.get("/api/sudden-death/list", (_req, res) => {
-  const entries = Object.entries(suddenDeathCaptions).map(([videoId, lines]) => ({
-    videoId,
-    title: lines[0]?.text || videoId,
-    hasLyrics: true,
-  }))
-  res.json(entries)
+app.get("/api/sudden-death/list", async (_req, res) => {
+  try {
+    const entries = await Promise.all(
+      Object.entries(suddenDeathCaptions).map(async ([videoId, lines]) => {
+        const title = (await resolveVideoTitle(videoId, lines)) || fallbackTitle(videoId, lines)
+        return { videoId, title, hasLyrics: true }
+      })
+    )
+    res.json(entries)
+  } catch (err) {
+    console.error("GET /api/sudden-death/list error", err)
+    const entries = Object.entries(suddenDeathCaptions).map(([videoId, lines]) => ({
+      videoId,
+      title: fallbackTitle(videoId, lines),
+      hasLyrics: true,
+    }))
+    res.json(entries)
+  }
 })
 
 // GET /api/prompts : get prompt list
@@ -194,7 +265,9 @@ app.get("/api/sudden-death/captions", async (req, res) => {
     }
   })
 
-  res.json(normalized)
+  const title = (await resolveVideoTitle(videoId, normalized)) || fallbackTitle(videoId, normalized)
+
+  res.json({ title, lines: normalized })
 })
 
 // GET /api/sudden-death/search : YouTube 動画検索（歌詞は自前入力）

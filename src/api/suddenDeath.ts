@@ -1,4 +1,4 @@
-import type { SuddenLyricLine, SuddenVideoListItem, SuddenVideoSearchResult } from "../types"
+import type { SuddenCaptionsResponse, SuddenVideoListItem, SuddenVideoSearchResult } from "../types"
 
 const API_BASE = (import.meta as any)?.env?.VITE_API_BASE_URL ?? "http://localhost:3001"
 
@@ -8,14 +8,14 @@ function buildURL(videoId: string) {
   return url.toString()
 }
 
-export async function fetchSuddenLines(videoId: string): Promise<SuddenLyricLine[]> {
+export async function fetchSuddenLines(videoId: string): Promise<SuddenCaptionsResponse> {
   if (!videoId.trim()) throw new Error("videoId is required")
   const res = await fetch(buildURL(videoId.trim()))
   if (!res.ok) {
     const msg = await res.text().catch(() => "")
     throw new Error(`Failed to fetch captions: ${res.status} ${msg}`)
   }
-  return (await res.json()) as SuddenLyricLine[]
+  return (await res.json()) as SuddenCaptionsResponse
 }
 
 export async function searchSuddenVideos(query: string): Promise<SuddenVideoSearchResult[]> {
