@@ -49,6 +49,7 @@ export function SuddenDeathGame() {
   const pendingIntroSkipRef = useRef(false)
   const startSecRef = useRef(0)
   const focusAnchorRef = useRef<HTMLDivElement | null>(null)
+  const countdownSkippedRef = useRef(false)
 
   const currentLine = lines[currentIdx] ?? null
 
@@ -178,20 +179,27 @@ export function SuddenDeathGame() {
         const adjusted = t * 1000 + offsetMs
 
         // Countdown trigger: start showing 3s before first line
-        if (phase === "waiting" && lines.length > 0 && !countdownActive) {
+        if (phase === "waiting" && lines.length > 0 && !countdownActive && !introSkippedRef.current && !manualStartedRef.current) {
           const remainingToFirst = firstLineStartMs - adjusted
-          if (remainingToFirst <= 3000) {
+          if (!countdownSkippedRef.current && remainingToFirst <= 3000) {
             const nextCountdown = Math.max(0, Math.ceil(remainingToFirst / 1000))
             setCountdown(nextCountdown)
             setCountdownActive(true)
             setPhase("countdown")
+            introSkippedRef.current = true
+            pendingIntroSkipRef.current = false
             // stay in waiting; countdown effect handles transition to playing
           }
         }
 
         if (phase === "countdown" && lines.length > 0) {
-          // while counting down, keep currentIdx at 0
+          // while counting down, keep currentIdx at 0 and keep playing
           setCurrentIdx(0)
+          try {
+            playerRef.current?.unMute?.()
+            playerRef.current?.playVideo?.()
+            setIsPlaying(true)
+          } catch { /* ignore */ }
         }
 
         if (phase === "waiting" && lines.length > 0 && adjusted >= firstLineStartMs && !countdownActive) {
@@ -236,16 +244,9 @@ export function SuddenDeathGame() {
     if (countdown <= 0) {
       const primed = Number.isFinite(startSecRef.current)
       const startSec = primed ? startSecRef.current : Math.max(0, firstLineStartMs / 1000 - 3)
-      if (Number.isFinite(startSec)) {
-        try {
-          if (!primed) playerRef.current?.seekTo(startSec, true)
-          playerRef.current?.playVideo()
-          setIsPlaying(true)
-          setCurrentTime(startSec)
-        } catch (err) {
-          console.error("Countdown start seek failed", err)
-        }
-      }
+      // 再生はカウントダウン中に走っているのでここでは止めず、状態だけ整える
+      if (Number.isFinite(startSec)) setCurrentTime(startSec)
+      setIsPlaying(true)
       manualStartedRef.current = true
       setPhase("playing")
       setCurrentIdx(0)
@@ -266,7 +267,9 @@ export function SuddenDeathGame() {
     return splitForHighlight(input, currentLine.romaji)
   }, [currentLine, input])
 
-  const handleSkipLine = useCallback(() => {
+  const renderRomaji = useCallback((s: string) => s.replace(/-/g, "\u2011"), [])
+
+  const handleSkipLine = useCallback((opts?: { seekToNextStart?: boolean }) => {
     if (phase !== "playing" && phase !== "waiting") return
     if (!lines.length) return
     const nextIdx = currentIdx + 1
@@ -276,6 +279,16 @@ export function SuddenDeathGame() {
       setPhase("cleared")
     } else {
       setCurrentIdx(nextIdx)
+      if (opts?.seekToNextStart && playerRef.current) {
+        const targetStartMs = lines[nextIdx]?.startMs
+        const targetSec = typeof targetStartMs === "number" ? targetStartMs / 1000 : null
+        if (targetSec != null && Number.isFinite(targetSec)) {
+          try { playerRef.current.seekTo(targetSec, true) } catch { /* ignore */ }
+          setCurrentTime(targetSec)
+          lastTimeRef.current = targetSec
+          lastNowRef.current = typeof performance !== "undefined" ? performance.now() : null
+        }
+      }
     }
   }, [phase, lines, currentIdx, offsetMs])
 
@@ -342,6 +355,7 @@ export function SuddenDeathGame() {
     if (opts?.resetManualStart) manualStartedRef.current = false
     introSkippedRef.current = false
     pendingIntroSkipRef.current = false
+    countdownSkippedRef.current = false
     setPlayerStarted(false)
     if (opts?.resetManualStart || opts?.clearLines) {
       lastTimeRef.current = 0
@@ -450,34 +464,23 @@ export function SuddenDeathGame() {
   }
 
   const startRun = useCallback(() => {
-    if (!lines.length) return
-    if (!playerReady || !playerRef.current) {
-      setError("プレイヤーの準備中です。数秒後にもう一度 Start を押してください。")
+    // クリア/失敗後のリセット用: READY に戻すだけで自動再生しない
+    if (!lines.length) {
+      setPhase("idle")
       return
     }
-    resetState()
-    lastTimeRef.current = 0
-    lastNowRef.current = null
-    setCountdown(null)
-    setCountdownActive(false)
-    setSolvedEarly(false)
-    // ユーザー操作での開始なので、再生開始イベントで余計な resetState が走らないようにフラグを立てる
-    manualStartedRef.current = true
-    setLines(lines)
-    setPhase("waiting")
+    resetState({ resetManualStart: true })
+    setPhase("ready")
     try {
-      // ユーザー操作直後に確実に再生を試みる（autoplay 制限回避のため unMute -> playVideo を連続で呼ぶ）
-      try { playerRef.current?.unMute?.() } catch { }
-      playerRef.current?.playVideo()
-      setTimeout(() => {
-        try {
-          playerRef.current?.playVideo()
-        } catch { }
-      }, 150)
-      // Start ボタン押下時だけ入力を受け付けられるようにフォーカス
-      try { inputRef.current?.focus({ preventScroll: true }) } catch { }
-    } catch { }
-  }, [firstLineStartMs, lines, playerReady])
+      playerRef.current?.pauseVideo()
+      playerRef.current?.seekTo(0, true)
+      setIsPlaying(false)
+      setPlayerStarted(false)
+      setCurrentTime(0)
+      lastTimeRef.current = 0
+      lastNowRef.current = null
+    } catch { /* ignore */ }
+  }, [lines])
 
   const handleSolved = () => {
     const nextIdx = currentIdx + 1
@@ -495,7 +498,8 @@ export function SuddenDeathGame() {
     if (phase !== "playing") return
     if (!currentLine) return
     if (solvedEarly) return
-    const sanitized = val.replace(/[^a-zA-Z'\s]/g, "")
+    // 伸ばし棒（ハイフン）も許容する
+    const sanitized = val.replace(/[^a-zA-Z'\s-]/g, "")
     if (phase !== "playing") {
       setInput(sanitized)
       return
@@ -513,12 +517,13 @@ export function SuddenDeathGame() {
 
   const startCountdownToFirstLine = useCallback(() => {
     if (!lines.length) return
-    if (countdownActive || phase === "countdown" || phase === "playing") return
+    if (countdownActive || phase === "countdown") return
     const startSec = Math.max(0, firstLineStartMs / 1000 - 3)
     if (!Number.isFinite(startSec)) return
     introSkippedRef.current = true
     pendingIntroSkipRef.current = false
-    manualStartedRef.current = false
+    countdownSkippedRef.current = false
+    manualStartedRef.current = true
     startSecRef.current = startSec
     setPhase("countdown")
     setCountdown(3)
@@ -526,9 +531,15 @@ export function SuddenDeathGame() {
     setSolvedEarly(false)
     setCurrentIdx(0)
     setInput("")
-    try { playerRef.current?.pauseVideo?.() } catch { /* ignore */ }
-    try { playerRef.current?.seekTo(startSec, true) } catch { /* ignore */ }
-    setIsPlaying(false)
+    try {
+      playerRef.current?.seekTo(startSec, true)
+      playerRef.current?.unMute?.()
+      playerRef.current?.playVideo()
+      setIsPlaying(true)
+      setCurrentTime(startSec)
+      lastTimeRef.current = startSec
+      lastNowRef.current = typeof performance !== "undefined" ? performance.now() : null
+    } catch { /* ignore */ }
   }, [lines.length, firstLineStartMs])
 
   const statusTag = (() => {
@@ -545,6 +556,11 @@ export function SuddenDeathGame() {
 
   const requestIntroSkip = useCallback(() => {
     if (!lines.length) return
+    const adjusted = currentTime * 1000 + offsetMs
+    // イントロ区間を過ぎている場合はスキップさせない
+    if (lines.length > 0 && Number.isFinite(firstLineStartMs) && adjusted >= firstLineStartMs - 200) {
+      return
+    }
     pendingIntroSkipRef.current = true
     try { playerRef.current?.unMute?.() } catch { /* ignore */ }
     try { playerRef.current?.playVideo?.() } catch { /* ignore */ }
@@ -552,7 +568,7 @@ export function SuddenDeathGame() {
     if (playerReadyState) {
       startCountdownToFirstLine()
     }
-  }, [lines.length, playerReadyState, startCountdownToFirstLine])
+  }, [lines.length, playerReadyState, startCountdownToFirstLine, currentTime, offsetMs, firstLineStartMs])
 
   useEffect(() => {
     const iframe = playerRef.current?.getIframe?.()
@@ -612,15 +628,70 @@ export function SuddenDeathGame() {
       focusApp()
     }
     const onKey = (e: KeyboardEvent) => {
+      const getAdjustedNow = () => {
+        const live = playerRef.current?.getCurrentTime?.()
+        const t = Number.isFinite(live) ? (live as number) : currentTime
+        return t * 1000 + offsetMs
+      }
+      const adjustedNow = getAdjustedNow()
+      const firstLineMs = Number.isFinite(firstLineStartMs) ? firstLineStartMs : null
+      const beforeFirstLine = firstLineMs == null ? false : adjustedNow < firstLineMs - 100
+
+      // シークでイントロ前に戻した場合はフラグを下げる
+      if (beforeFirstLine && introSkippedRef.current) {
+        introSkippedRef.current = false
+        pendingIntroSkipRef.current = false
+        countdownSkippedRef.current = false
+      }
+
+      if (e.code === "F4") {
+        e.preventDefault()
+        handleReset()
+        return
+      }
       if (e.code === "Space") {
         e.preventDefault()
         e.stopPropagation()
         if (phase === "countdown") {
+          // カウントダウンを即スキップして開始する
+          const primed = Number.isFinite(startSecRef.current) && startSecRef.current > 0
+          const startSec = primed ? startSecRef.current : Math.max(0, firstLineStartMs / 1000 - 3)
+          startSecRef.current = startSec
           setCountdown(0)
+          setCountdownActive(false)
+          introSkippedRef.current = true
+          pendingIntroSkipRef.current = false
+          countdownSkippedRef.current = true
+          manualStartedRef.current = true
+          setPhase("playing")
+          setCurrentIdx(0)
+          setInput("")
+          setSolvedEarly(false)
+          setCountdown(null)
+          try {
+            if (Number.isFinite(startSec)) {
+              playerRef.current?.seekTo(startSec, true)
+              setCurrentTime(startSec)
+              lastTimeRef.current = startSec
+              lastNowRef.current = typeof performance !== "undefined" ? performance.now() : null
+            }
+            playerRef.current?.playVideo()
+            setIsPlaying(true)
+          } catch { /* ignore */ }
+          return
+        }
+        if (phase === "playing" && beforeFirstLine) {
+          startCountdownToFirstLine()
           return
         }
         if (phase === "waiting" || phase === "ready") {
-          requestIntroSkip()
+          if (!beforeFirstLine) return
+          startCountdownToFirstLine()
+          return
+        }
+        const introDone = introSkippedRef.current || !beforeFirstLine
+        if ((phase === "playing" || phase === "waiting") && introDone) {
+          handleSkipLine({ seekToNextStart: true })
           return
         }
         if (phase === "playing") {
@@ -653,9 +724,18 @@ export function SuddenDeathGame() {
     }
   }, [playerReadyState, startCountdownToFirstLine])
 
+  // イントロ以降（最初の行開始後）は Space がリセットにならないよう introSkipped を自動で立てる
+  useEffect(() => {
+    const adjusted = currentTime * 1000 + offsetMs
+    if (!introSkippedRef.current && lines.length && Number.isFinite(firstLineStartMs) && adjusted >= firstLineStartMs) {
+      introSkippedRef.current = true
+      pendingIntroSkipRef.current = false
+    }
+  }, [currentTime, offsetMs, firstLineStartMs, lines.length])
+
   return (
-      <div className="space-y-6">
-        <div ref={focusAnchorRef} tabIndex={-1} aria-hidden="true" className="sr-only" />
+    <div className="space-y-6">
+      <div ref={focusAnchorRef} tabIndex={-1} aria-hidden="true" className="sr-only" />
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-rose-500/15 border border-rose-500/40 shadow-inner">
@@ -682,27 +762,30 @@ export function SuddenDeathGame() {
         </div>
 
         <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-black relative">
-        <div
-          id="sudden-player"
-          className="w-full h-full"
-          tabIndex={-1}
-          onClick={() => {
-            // Let player controls work; lightly refocus input so Space stays on our handler
-            setTimeout(() => {
-              try { focusAnchorRef.current?.focus({ preventScroll: true }) } catch { }
-              if (phase === "playing") {
-                try { inputRef.current?.focus({ preventScroll: true }) } catch { }
-              }
-            }, 0)
-          }}
-        />
-      </div>
+          <div
+            id="sudden-player"
+            className="w-full h-full"
+            tabIndex={-1}
+            onClick={() => {
+              // Let player controls work; lightly refocus input so Space stays on our handler
+              setTimeout(() => {
+                try { focusAnchorRef.current?.focus({ preventScroll: true }) } catch { }
+                if (phase === "playing") {
+                  try { inputRef.current?.focus({ preventScroll: true }) } catch { }
+                }
+              }, 0)
+            }}
+          />
+        </div>
 
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3 justify-between">
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800/70 border border-slate-700">
-                <span className="font-semibold text-slate-200">Space</span> イントロスキップ・リセット
+                <span className="font-semibold text-slate-200">Space</span> イントロスキップ / イントロ後は次行へ
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800/70 border border-slate-700">
+                <span className="font-semibold text-slate-200">F4</span> READY にリセット
               </span>
             </div>
           </div>
@@ -723,7 +806,7 @@ export function SuddenDeathGame() {
               )}
 
               <div className="relative min-h-[3.25rem] md:min-h-[3.75rem] flex items-center justify-center">
-                <div className="text-2xl md:text-3xl font-bold text-slate-50 leading-tight break-words whitespace-pre-wrap text-center">
+                <div className="text-2xl md:text-3xl font-bold text-slate-50 leading-tight break-words whitespace-pre-wrap text-left">
                   {currentLine.text}
                 </div>
                 {phase === "countdown" && countdown != null && countdown > 0 && (
@@ -735,16 +818,19 @@ export function SuddenDeathGame() {
                   </span>
                 )}
               </div>
-              <div className={`rounded-xl border px-3 py-3 font-mono text-lg md:text-xl break-words whitespace-pre-wrap ${shake ? "border-rose-500 animate-[shake_0.2s_ease-in-out] bg-slate-950/70" : "border-slate-800 bg-slate-950/70"
-                } ${solvedEarly ? "opacity-60" : "text-slate-200"}`}>
+              <div
+                className={`rounded-xl border px-3 py-3 font-mono text-lg md:text-xl whitespace-pre-wrap ${shake ? "border-rose-500 animate-[shake_0.2s_ease-in-out] bg-slate-950/70" : "border-slate-800 bg-slate-950/70"
+                  } ${solvedEarly ? "opacity-60" : "text-slate-200"}`}
+                style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
+              >
                 {highlight ? (
                   <span>
-                    <span className="text-emerald-300">{highlight.correct}</span>
-                    <span className={highlight.isMistake ? "bg-rose-600/60 text-white px-1 rounded" : "text-slate-400"}>{highlight.next}</span>
-                    <span className="text-slate-500">{highlight.rest}</span>
+                    <span className="text-emerald-300">{renderRomaji(highlight.correct)}</span>
+                    <span className={highlight.isMistake ? "bg-rose-600/60 text-white px-1 rounded" : "text-slate-400"}>{renderRomaji(highlight.next)}</span>
+                    <span className="text-slate-500">{renderRomaji(highlight.rest)}</span>
                   </span>
                 ) : (
-                  currentLine.romaji
+                  renderRomaji(currentLine.romaji)
                 )}
               </div>
               <div className="space-y-1">
@@ -855,7 +941,7 @@ export function SuddenDeathGame() {
                   >
                     <div className="p-3 space-y-1">
                       <p className="text-sm font-semibold text-slate-100 line-clamp-2">{v.title}</p>
-                      <p className="text-xs text-slate-400 line-clamp-1">歌詞付き (seed)</p>
+                      <p className="text-xs text-slate-400 line-clamp-1">歌詞付き</p>
                       <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-full bg-slate-800/80 text-slate-200">これで遊ぶ</span>
                     </div>
                   </button>
