@@ -46,7 +46,22 @@ type MultiActions = {
   setName: (name: string) => void
 }
 
-const SOCKET_URL = 'http://localhost:3001'
+const env = (import.meta as any)?.env ?? {}
+const socketBaseFromApi = (() => {
+  const api = env.VITE_API_BASE_URL
+  if (!api) return null
+  try {
+    return new URL(api).origin
+  } catch {
+    return null
+  }
+})()
+
+// Prefer explicit socket URL, then API base origin, then current host:3001, last-resort localhost
+const SOCKET_URL =
+  env.VITE_SOCKET_URL ||
+  socketBaseFromApi ||
+  (typeof location !== 'undefined' ? `${location.protocol}//${location.hostname}:3001` : 'http://localhost:3001')
 
 export const useMultiStore = create<MultiState & MultiActions>()((set, get) => ({
   connected: false,

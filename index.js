@@ -9,11 +9,14 @@ dotenv.config()
 
 const app = express()
 
-const FRONT_ORIGIN = process.env.FRONT_ORIGIN || "http://localhost:5173"
+const FRONT_ORIGINS = (process.env.FRONT_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean)
 const PORT = process.env.PORT || 3001
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY // ここに入れる（.env に設定）
 
-app.use(cors({ origin: FRONT_ORIGIN }))
+app.use(cors({ origin: FRONT_ORIGINS }))
 app.use(express.json())
 
 // Seed prompts (practice mode)
@@ -84,7 +87,8 @@ const suddenDeathCaptions = {
     { startSec: 170, endSec: 183, text: "今になってさ 思い出してさ 後悔じゃなにも解決しないさ", romaji: "imaninattesaomoidasitesakoukaizyananimokaiketusinaisa" },
     { startSec: 183, endSec: 189, text: "忘れられないのは 受け入れられないのは", romaji: "wasurerarenainohaukeirerarenainoha" },
     { startSec: 189, endSec: 199, text: "君を思い出にできるほど僕は 強くはないから", romaji: "kimiwoomoidenidekiruhodobokuhatuyokunaikara" },
-    { startSec: 199, endSec: 217, text: "僕の見た景色を全部 君にも見せてやりたかったんだ あったかいココアを一口", romaji: "bokunomitakesikiwozennbukiminimomiseteyaritakattanndaatatakaikokoawohitokuti" },
+    { startSec: 199, endSec: 212, text: "僕の見た景色を全部 君にも見せてやりたかったんだ", romaji: "bokunomitakesikiwozennbukiminimomiseteyaritakattannda" },
+    { startSec: 212, endSec: 217, text: "あったかいココアを一口", romaji: "attkaikokoawohitokuti" },
     { startSec: 217, endSec: 230, text: "いつかまた逢う日までと 笑う顔に嘘は見当たらない", romaji: "itukamataauhimadetowaraukaoniuwohamiataranai" },
     { startSec: 230, endSec: 241, text: "じゃあね じゃあね またどっか遠くで", romaji: "zyaanezyaanemtadokkatookude" },
     { startSec: 241, endSec: 279, text: "いつか", romaji: "itsuka" },
@@ -116,8 +120,8 @@ const suddenDeathCaptions = {
   ],
 
   "8VKKWmhtWSc": [
-    { startSec: 26, endSec: 30, text: "僕の前だけで", romaji: "bokunomaedakede" },
-    { startSec: 30, endSec: 37, text: "今夜だけ独身に戻る君を僕は責めなかった", romaji: "konyadakedokusinnnimodorukimiwobokuhasemenakatta" },
+    { startSec: 26, endSec: 29, text: "僕の前だけで", romaji: "bokunomaedakede" },
+    { startSec: 29, endSec: 37, text: "今夜だけ独身に戻る君を僕は責めなかった", romaji: "konyadakedokusinnnimodorukimiwobokuhasemenakatta" },
     { startSec: 37, endSec: 49, text: "時間が許すまで 恋人でいられる気がしてしまってたんだ", romaji: "zikanngayurusumadekoibitodeirarerukigasitesimattetanda" },
     { startSec: 49, endSec: 61, text: "もしも二人 もっと早くに 出会っていたら どうなっていたかな", romaji: "mosimohutarimottohayakunideatteitaradounatteitakana" },
     { startSec: 61, endSec: 66, text: "そんな風に君が言うから答えたんだ", romaji: "sonnnahuunikimigaiukarakotaetannda" },
@@ -128,7 +132,7 @@ const suddenDeathCaptions = {
     { startSec: 89, endSec: 97, text: "僕はそれだけで幸せで君と笑ってた", romaji: "bokuhasoredakedesiawasedekimitowaratteta" },
     { startSec: 97, endSec: 102, text: "いつもはどんな顔をしているか", romaji: "itumohadonnnakaowositeiruka" },
     { startSec: 102, endSec: 108, text: "どんな毎日を送ってるか知らなかった", romaji: "donnnamainitiwookutteirukasiranakatta" },
-    { startSec: 108, endSec: 120, text: "薬指の指輪だけが 僕になにか教えてくれた", romaji: "kusuriyubidakegabokuninanikaosietekureta" },
+    { startSec: 108, endSec: 120, text: "薬指の指輪だけが 僕になにか教えてくれた", romaji: "kusuriyubinoyubiwadakegabokuninanikaosietekureta" },
     { startSec: 120, endSec: 126, text: "電話さえ許されなくて", romaji: "denwasaeyurusarenakute" },
     { startSec: 126, endSec: 131, text: "でも抑えられるとまた会いたくなった", romaji: "demoosaerarerutomataaitakuntatta" },
     { startSec: 131, endSec: 142, text: "今夜、元にあった場所に君を戻さないで このまま連れ去れたら", romaji: "konyamotoniattabasyonikimiwomodosanaidekonomamaturesaretara" },
@@ -145,7 +149,7 @@ const suddenDeathCaptions = {
     { startSec: 226, endSec: 232, text: "一ヶ月に一度だけ甘い夢に触れた", romaji: "ikkagetuniitidodakeamaiyumenihureta" },
     { startSec: 232, endSec: 238, text: "この恋が綺麗な秘密で終わるように", romaji: "konokoigakireinahimitudeowaruyouni" },
     { startSec: 238, endSec: 243, text: "ちゃんと終わらせるから", romaji: "tyanntoowaraserukara" },
-    { startSec: 243, endSec: 255, text: "この物語にハッピーエンドなんてないと わかってても これで最後と誓っても", romaji: "konomonogatarinihappi-enndonanntenaito" },
+    { startSec: 243, endSec: 255, text: "この物語にハッピーエンドなんてないと わかってても これで最後と誓っても", romaji: "konomonogatarinihappi-enndonanntenaitowakattetemokoredesaigototikattemo" },
     { startSec: 255, endSec: 262, text: "何度だって破り捨てて また二人で迎えた日々を", romaji: "nanndodatteyaburisutetematahutaridemukaetahibiwo" },
     { startSec: 262, endSec: 266, text: "もうこれで本当に", romaji: "moukoredehonntouni" },
     { startSec: 266, endSec: 273, text: "最後にしてしまうね 今まで嬉しかったよ", romaji: "saigonisitesimauneimamadeuresikattayo" },
@@ -154,7 +158,11 @@ const suddenDeathCaptions = {
     { startSec: 285, endSec: 290, text: "この音が止まったら", romaji: "konootogatomattara" },
     { startSec: 290, endSec: 295, text: "そこで手を離すね", romaji: "sokodetewohanasune" },
     { startSec: 295, endSec: 332, text: "さようなら", romaji: "sayounara" },
-  ]
+  ],
+
+  "jpOsSnmem0s": [],
+  "U8pJgoOhiDs": []
+
 }
 
 const supportedVideoIds = new Set(Object.keys(suddenDeathCaptions))
@@ -378,7 +386,7 @@ async function searchYoutubeVideos(query) {
 const server = http.createServer(app)
 
 const io = new Server(server, {
-  cors: { origin: FRONT_ORIGIN, methods: ["GET", "POST"] },
+  cors: { origin: FRONT_ORIGINS, methods: ["GET", "POST"] },
 })
 
 // rooms: Map<roomId, { roomId, isStarted, players }>
@@ -460,7 +468,8 @@ io.on("connection", (socket) => {
 })
 
 server.listen(PORT, () => {
-  console.log(`API + Socket.IO server listening on http://localhost:${PORT} (CORS: ${FRONT_ORIGIN})`)
+  const corsList = Array.isArray(FRONT_ORIGINS) ? FRONT_ORIGINS.join(",") : FRONT_ORIGINS
+  console.log(`API + Socket.IO server listening on http://localhost:${PORT} (CORS: ${corsList})`)
 })
 
 

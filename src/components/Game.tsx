@@ -123,12 +123,22 @@ export function Game({ prompt, status, onPromptTimeUp, onSessionTimeUp }: GamePr
         <div className="space-y-1.5">
           <div className="flex justify-between items-end px-1">
             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Time Limit</div>
-            <div className="text-xs font-mono font-medium text-slate-400">
-              <span className={remaining != null && remaining <= 5 ? "text-rose-400 font-bold scale-110 inline-block transition-transform" : "text-slate-300"}>
-                {remaining ?? '-'}
-              </span>
-              <span className="opacity-50 mx-1">/</span>
-              {timeLimit}s
+            <div className="text-xs font-mono font-medium text-slate-400 tabular-nums">
+              {(() => {
+                const remainingText = remaining == null ? '--' : Math.max(0, remaining).toString().padStart(2, '0')
+                const limitText = timeLimit != null ? timeLimit.toString().padStart(2, '0') : '--'
+                const danger = remaining != null && remaining <= 5
+                return (
+                  <>
+                    <span className={`inline-block min-w-[3ch] text-right ${danger ? "text-rose-400 font-bold scale-110 transition-transform" : "text-slate-300"}`}>
+                      {remainingText}
+                    </span>
+                    <span className="opacity-50 mx-1">/</span>
+                    <span className="inline-block min-w-[3ch] text-right text-slate-400">{limitText}</span>
+                    <span className="ml-1 text-slate-500">s</span>
+                  </>
+                )
+              })()}
             </div>
           </div>
           {/* Progress Bar Container */}
@@ -272,4 +282,3 @@ function SessionText({ endsAt }: { endsAt: number }) {
 }
 
 // End of file
-

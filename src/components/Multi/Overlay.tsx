@@ -76,10 +76,26 @@ export function MultiOverlay() {
   useEffect(() => {
     if (!isInRoom) return
     const onPC = () => { setCorrect((c) => { const n = c + 1; sendProgress({ score: score + 10, correctCount: n, mistakeCount: mistakes, timeouts }); setScore((s) => s + 10); return n }) }
-    const onPM = () => { setMistakes((m) => { const n = m + 1; sendProgress({ score, correctCount: correct, mistakeCount: n, timeouts }); return n }) }
+    const onPM = () => {
+      setMistakes((m) => {
+        const n = m + 1
+        const nextScore = Math.max(0, score - 5)
+        setScore(nextScore)
+        sendProgress({ score: nextScore, correctCount: correct, mistakeCount: n, timeouts })
+        return n
+      })
+    }
     const onPT = () => { setTimeouts((t) => { const n = t + 1; sendProgress({ score, correctCount: correct, mistakeCount: mistakes, timeouts: n }); return n }) }
     const onFC = () => { setCorrect((c) => { const n = c + 1; sendProgress({ score: score + 10, correctCount: n, mistakeCount: mistakes, timeouts }); setScore((s) => s + 10); return n }) }
-    const onFM = () => { setMistakes((m) => { const n = m + 1; sendProgress({ score, correctCount: correct, mistakeCount: n, timeouts }); return n }) }
+    const onFM = () => {
+      setMistakes((m) => {
+        const n = m + 1
+        const nextScore = Math.max(0, score - 5)
+        setScore(nextScore)
+        sendProgress({ score: nextScore, correctCount: correct, mistakeCount: n, timeouts })
+        return n
+      })
+    }
     const onFT = () => { setTimeouts((t) => { const n = t + 1; sendProgress({ score, correctCount: correct, mistakeCount: mistakes, timeouts: n }); return n }) }
     window.addEventListener('typing:practice-correct', onPC as EventListener)
     window.addEventListener('typing:practice-mistake', onPM as EventListener)
