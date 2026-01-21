@@ -529,9 +529,8 @@ export function SuddenDeathGame() {
   const startCountdownToFirstLine = useCallback(() => {
     if (!lines.length) return
     if (countdownActive || phase === "countdown") return
-    const startSec = Math.max(0, firstLineStartMs / 1000 - 3)
-    if (!Number.isFinite(startSec)) return
-    introSkippedRef.current = true
+    const startSec = 0
+    introSkippedRef.current = false
     pendingIntroSkipRef.current = false
     countdownSkippedRef.current = false
     manualStartedRef.current = true
@@ -666,11 +665,11 @@ export function SuddenDeathGame() {
         if (phase === "countdown") {
           // カウントダウンを即スキップして開始する
           const primed = Number.isFinite(startSecRef.current) && startSecRef.current > 0
-          const startSec = primed ? startSecRef.current : Math.max(0, firstLineStartMs / 1000 - 3)
+          const startSec = primed ? startSecRef.current : 0
           startSecRef.current = startSec
           setCountdown(0)
           setCountdownActive(false)
-          introSkippedRef.current = true
+          introSkippedRef.current = false
           pendingIntroSkipRef.current = false
           countdownSkippedRef.current = true
           manualStartedRef.current = true
