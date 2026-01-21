@@ -189,8 +189,8 @@ export function SuddenDeathGame() {
         setDuration(d)
         const adjusted = t * 1000 + offsetMs
 
-        // Countdown trigger: start showing 3s before first line
-        if (phase === "waiting" && lines.length > 0 && !countdownActive && !introSkippedRef.current && !manualStartedRef.current) {
+        // Countdown trigger: start showing 3s before first line (only if first line has a positive timestamp)
+        if (phase === "waiting" && lines.length > 0 && !countdownActive && !introSkippedRef.current && firstLineStartMs > 0 && adjusted < firstLineStartMs) {
           const remainingToFirst = firstLineStartMs - adjusted
           if (!countdownSkippedRef.current && remainingToFirst <= 3000) {
             const nextCountdown = Math.max(0, Math.ceil(remainingToFirst / 1000))
@@ -253,10 +253,6 @@ export function SuddenDeathGame() {
     if (!countdownActive) return
     if (countdown == null) return
     if (countdown <= 0) {
-      const primed = Number.isFinite(startSecRef.current)
-      const startSec = primed ? startSecRef.current : Math.max(0, firstLineStartMs / 1000 - 3)
-      // 再生はカウントダウン中に走っているのでここでは止めず、状態だけ整える
-      if (Number.isFinite(startSec)) setCurrentTime(startSec)
       setIsPlaying(true)
       manualStartedRef.current = true
       setPhase("playing")
@@ -493,6 +489,30 @@ export function SuddenDeathGame() {
     } catch { /* ignore */ }
   }, [lines])
 
+  const startFromBeginning = useCallback(() => {
+    if (!lines.length) return
+    introSkippedRef.current = false
+    pendingIntroSkipRef.current = false
+    countdownSkippedRef.current = false
+    manualStartedRef.current = false
+    startSecRef.current = 0
+    setCountdown(null)
+    setCountdownActive(false)
+    setSolvedEarly(false)
+    setCurrentIdx(0)
+    setInput("")
+    setPhase("waiting")
+    try {
+      playerRef.current?.seekTo(0, true)
+      playerRef.current?.unMute?.()
+      playerRef.current?.playVideo()
+      setIsPlaying(true)
+      setCurrentTime(0)
+      lastTimeRef.current = 0
+      lastNowRef.current = typeof performance !== "undefined" ? performance.now() : null
+    } catch { /* ignore */ }
+  }, [lines.length])
+
   const handleSolved = () => {
     const nextIdx = currentIdx + 1
     setSolvedCount((c) => c + 1)
@@ -529,7 +549,8 @@ export function SuddenDeathGame() {
   const startCountdownToFirstLine = useCallback(() => {
     if (!lines.length) return
     if (countdownActive || phase === "countdown") return
-    const startSec = 0
+    if (!(Number.isFinite(firstLineStartMs) && firstLineStartMs > 0)) return
+    const startSec = Number.isFinite(firstLineStartMs) ? Math.max(0, firstLineStartMs / 1000 - 3) : 0
     introSkippedRef.current = false
     pendingIntroSkipRef.current = false
     countdownSkippedRef.current = false
@@ -550,7 +571,7 @@ export function SuddenDeathGame() {
       lastTimeRef.current = startSec
       lastNowRef.current = typeof performance !== "undefined" ? performance.now() : null
     } catch { /* ignore */ }
-  }, [lines.length, firstLineStartMs])
+  }, [lines.length, firstLineStartMs, countdownActive, phase])
 
   const statusTag = (() => {
     switch (phase) {
@@ -694,10 +715,19 @@ export function SuddenDeathGame() {
           startCountdownToFirstLine()
           return
         }
-        if (phase === "waiting" || phase === "ready") {
-          if (!beforeFirstLine) return
-          startCountdownToFirstLine()
+        if (phase === "ready") {
+          startFromBeginning()
           return
+        }
+        if (phase === "waiting") {
+          if (!beforeFirstLine && !isPlaying) {
+            startFromBeginning()
+            return
+          }
+          if (beforeFirstLine) {
+            startCountdownToFirstLine()
+            return
+          }
         }
         const introDone = introSkippedRef.current || !beforeFirstLine
         if ((phase === "playing" || phase === "waiting") && introDone) {
@@ -716,7 +746,7 @@ export function SuddenDeathGame() {
     }
     document.addEventListener("keydown", onKey, { capture: true })
     return () => document.removeEventListener("keydown", onKey, { capture: true } as any)
-  }, [phase, handleSkipLine, requestIntroSkip, firstLineStartMs])
+  }, [phase, handleSkipLine, requestIntroSkip, firstLineStartMs, startCountdownToFirstLine, startFromBeginning, handleReset, currentTime, offsetMs, isPlaying])
 
   const formatTime = (t: number) => {
     if (!Number.isFinite(t)) return "0:00"
@@ -764,6 +794,9 @@ export function SuddenDeathGame() {
         {/* Cinematic Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/60 pointer-events-none" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#000000_120%)] pointer-events-none mix-blend-multiply" />
+        {(phase === 'ready' || phase === 'waiting') && (
+          <div className="absolute bottom-0 right-0 w-56 h-40 bg-gradient-to-tl from-black via-black/90 to-transparent pointer-events-none" />
+        )}
       </div>
 
       {/* 2. Main UI Layer */}
@@ -916,31 +949,6 @@ export function SuddenDeathGame() {
             {/* Center Stage: Interaction Area */}
             <div className="flex-1 flex flex-col items-center justify-end pb-24 px-4 sm:px-12 relative z-40">
 
-              {/* STATUS OVERLAYS */}
-
-              {/* Ready / Waiting */}
-              {(phase === 'ready' || phase === 'waiting') && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-in fade-in">
-                  <div className="bg-slate-900/90 border border-slate-800 p-10 rounded-3xl text-center shadow-2xl max-w-md w-full relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 to-blue-500/10 opacity-50 group-hover:opacity-100 transition-opacity" />
-                    <div className="relative z-10 space-y-6">
-                      <div className="w-20 h-20 mx-auto rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-[0_0_30px_rgba(244,63,94,0.2)]">
-                        {phase === 'waiting' ? <Loader2 className="w-10 h-10 text-rose-400 animate-spin" /> : <Play className="w-10 h-10 text-rose-400 ml-1" />}
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-black text-white">{phase === 'waiting' ? 'Buffering...' : 'Ready to Start'}</h2>
-                        <p className="text-slate-400 text-sm mt-2">{displayTitle}</p>
-                      </div>
-                      {phase === 'ready' && (
-                        <Button onClick={startCountdownToFirstLine} className="w-full py-6 text-lg font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-900/40 rounded-xl">
-                          START GAME <span className="ml-2 text-xs font-normal opacity-70">(Space)</span>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Countdown */}
               {phase === 'countdown' && countdown !== null && (
                 <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
@@ -984,8 +992,21 @@ export function SuddenDeathGame() {
 
 
               {/* ACTIVE GAMEPLAY AREA */}
-              {(phase === 'playing' || phase === 'countdown') && (
+              {(phase === 'playing' || phase === 'countdown' || phase === 'waiting' || phase === 'ready') && (
                 <div className="w-full max-w-5xl space-y-8 animate-in slide-in-from-bottom-10 fade-in duration-500">
+
+                  {phase === 'ready' && (
+                    <div className="rounded-2xl border border-slate-800 bg-black/50 px-6 py-5 flex items-center justify-between gap-4 shadow-lg">
+                      <div>
+                        <div className="text-xs uppercase tracking-widest text-rose-300/80 font-bold">BEAT TYPE RUSH</div>
+                        <div className="text-lg font-semibold text-white">{displayTitle}</div>
+                        <div className="text-xs text-slate-400">スペース / START で曲冒頭から再生します</div>
+                      </div>
+                      <Button onClick={startFromBeginning} className="px-5 py-3 text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-lg shadow-rose-900/30">
+                        START GAME
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Main Lyrics Display */}
                   <div ref={lineSectionRef} onClick={() => inputRef.current?.focus()} className="relative text-center group cursor-text">
