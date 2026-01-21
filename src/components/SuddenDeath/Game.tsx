@@ -819,7 +819,7 @@ export function SuddenDeathGame() {
                 )}
               </div>
               <div
-                className={`rounded-xl border px-3 py-3 font-mono text-lg md:text-xl whitespace-pre-wrap ${shake ? "border-rose-500 animate-[shake_0.2s_ease-in-out] bg-slate-950/70" : "border-slate-800 bg-slate-950/70"
+                className={`rounded-xl border px-3 py-3 font-mono text-lg md:text-xl whitespace-pre-wrap text-center ${shake ? "border-rose-500 animate-[shake_0.2s_ease-in-out] bg-slate-950/70" : "border-slate-800 bg-slate-950/70"
                   } ${solvedEarly ? "opacity-60" : "text-slate-200"}`}
                 style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
               >
