@@ -3,7 +3,9 @@ import { fetchSuddenLines, searchSuddenVideos, listSuddenVideos } from "../../ap
 import type { SuddenLyricLine, SuddenVideoSearchResult, SuddenVideoListItem } from "../../types"
 import { isAcceptedRomaji, prefixOKVariants, splitForHighlight } from "../../lib/typing"
 import { Button } from "../ui/Button"
-import { AlertTriangle, CheckCircle2, Loader2, Pause, Play, Skull, Volume2, VolumeX, Zap } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Heart, Loader2, Pause, Play, Skull, Volume2, VolumeX, Zap, Search, Music, Trophy, Sparkles } from "lucide-react"
+
+const MAX_TIMEOUTS = 5
 
 type Phase = "idle" | "loading" | "ready" | "waiting" | "countdown" | "playing" | "cleared" | "dead"
 
@@ -42,6 +44,15 @@ export function SuddenDeathGame() {
   const lastTimeRef = useRef(0)
   const lastNowRef = useRef<number | null>(null)
   const [shake, setShake] = useState(false)
+  const [failGlow, setFailGlow] = useState(false)
+
+  useEffect(() => {
+    if (mistakes > 0) {
+      setFailGlow(true)
+      const t = setTimeout(() => setFailGlow(false), 200)
+      return () => clearTimeout(t)
+    }
+  }, [mistakes])
   const lineSectionRef = useRef<HTMLDivElement | null>(null)
   const manualStartedRef = useRef(false)
   const lineProgressAnchorRef = useRef(0)
@@ -388,7 +399,7 @@ export function SuddenDeathGame() {
       setError(null)
       setLines(data.lines)
       setVideoTitle(data.title || "")
-      setPhase("waiting")
+      setPhase("ready")
       manualStartedRef.current = false
     } catch (e: any) {
       setError(e?.message ?? "取得に失敗しました")
@@ -733,245 +744,332 @@ export function SuddenDeathGame() {
     }
   }, [currentTime, offsetMs, firstLineStartMs, lines.length])
 
+  // --- Premium Theater UI Render ---
   return (
-    <div className="space-y-6">
+    <div className="relative w-full min-h-[90vh] md:h-screen max-h-[1080px] bg-black text-slate-100 overflow-hidden rounded-[2rem] shadow-2xl border border-slate-800 font-sans selection:bg-rose-500/30 group/app">
+
+      {/* 0. Logic Helpers (Invisible) */}
       <div ref={focusAnchorRef} tabIndex={-1} aria-hidden="true" className="sr-only" />
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-rose-500/15 border border-rose-500/40 shadow-inner">
-            <Zap className="w-5 h-5 text-rose-300" />
-          </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-extrabold tracking-widest text-slate-50">BEAT TYPE RUSH</h2>
-            <p className="text-xs text-slate-400">字幕から歌詞を引いて、ローマ字で撃ち抜く</p>
-          </div>
-        </div>
-        <span className={`px-3 py-1 rounded-full text-[11px] font-bold border ${statusTag.color}`}>
-          {statusTag.text}
-        </span>
-      </div>
 
-      <div className="rounded-3xl border border-slate-800 bg-slate-900/70 backdrop-blur-xl p-4 md:p-6 shadow-2xl space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1">
-            <p className="text-xs text-slate-400">現在の曲</p>
-            <p className="text-lg md:text-xl font-semibold text-slate-50 leading-tight line-clamp-2">{displayTitle}</p>
-            {videoId && <p className="text-[11px] text-slate-500">ID: {videoId}</p>}
-          </div>
-          {error && <span className="text-xs text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 py-1">エラー: {error}</span>}
-        </div>
-
-        <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-800 bg-black relative">
+      {/* 1. Background / Video Layer (Always present but styled differently per phase) */}
+      <div className={`absolute inset-0 transition-all duration-1000 ${phase === 'idle' || phase === 'loading' ? 'opacity-40 blur-sm scale-110' : 'opacity-100 scale-100'}`}>
+        {/* The Player Div - MUST be preserved for YT API */}
+        <div className="absolute inset-0 w-full h-full bg-slate-950">
           <div
             id="sudden-player"
-            className="w-full h-full"
+            className="w-full h-full pointer-events-none"
             tabIndex={-1}
-            onClick={() => {
-              // Let player controls work; lightly refocus input so Space stays on our handler
-              setTimeout(() => {
-                try { focusAnchorRef.current?.focus({ preventScroll: true }) } catch { }
-                if (phase === "playing") {
-                  try { inputRef.current?.focus({ preventScroll: true }) } catch { }
-                }
-              }, 0)
-            }}
           />
         </div>
 
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800/70 border border-slate-700">
-                <span className="font-semibold text-slate-200">Space</span> イントロスキップ / イントロ後は次行へ
-              </span>
-              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-800/70 border border-slate-700">
-                <span className="font-semibold text-slate-200">F4</span> READY にリセット
-              </span>
-            </div>
-          </div>
-        </div>
+        {/* Cinematic Overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/60 pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#000000_120%)] pointer-events-none mix-blend-multiply" />
       </div>
 
-      <div ref={lineSectionRef} className="rounded-3xl border border-slate-800 bg-slate-900/70 p-4 md:p-6 shadow-2xl space-y-4">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 md:p-5 space-y-4">
-          {(phase === "playing" || phase === "ready" || phase === "waiting" || phase === "countdown") && currentLine && (
-            <div className="space-y-3 relative" onClick={() => inputRef.current?.focus()} role="presentation">
-              {lines[currentIdx + 1] && (
-                <div className="space-y-1" aria-live="polite">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Next</p>
-                  <p className="text-base md:text-lg text-slate-300 leading-tight break-words whitespace-pre-wrap">
-                    {lines[currentIdx + 1].text}
+      {/* 2. Main UI Layer */}
+      <div className="relative z-10 w-full h-full flex flex-col">
+
+        {/* --- Phase A: Search & Lobby --- */}
+        {(phase === 'idle' || phase === 'loading') && (
+          <div className="flex-1 flex flex-col p-6 md:p-10 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
+
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-8 z-20">
+              {/* Logo */}
+              <div className="flex items-center gap-5">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-rose-500/40 blur-xl rounded-full animate-pulse" />
+                  <div className="relative p-4 bg-slate-900/80 rounded-2xl border border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.2)]">
+                    <Zap className="w-8 h-8 text-rose-400 fill-rose-400/20" />
+                  </div>
+                </div>
+                <div className="text-center md:text-left">
+                  <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-rose-200 to-rose-500 drop-shadow-sm">
+                    BEAT TYPE <span className="text-rose-500">RUSH</span>
+                  </h1>
+                  <p className="text-sm font-bold text-rose-300/60 tracking-[0.3em] uppercase mt-1">
+                    Sync x Rhythm x Typing
                   </p>
+                </div>
+              </div>
+
+              {/* Search Box */}
+              <div className="w-full max-w-xl relative group">
+                <div className="absolute inset-0 bg-rose-500/20 rounded-2xl blur-lg group-hover:bg-rose-500/30 transition-all opacity-0 group-focus-within:opacity-100" />
+                <div className="relative flex items-center bg-slate-900/80 border border-slate-700/50 rounded-2xl overflow-hidden shadow-xl transition-all group-focus-within:border-rose-500/50 group-focus-within:ring-2 group-focus-within:ring-rose-500/20">
+                  <Search className="w-5 h-5 text-slate-400 ml-4" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search YouTube or Enter URL..."
+                    className="w-full bg-transparent border-none text-white px-4 py-4 focus:ring-0 placeholder:text-slate-600"
+                    onKeyDown={(e) => { if (e.key === "Enter") void handleSearch() }}
+                  />
+                  <Button
+                    onClick={() => void handleSearch()}
+                    disabled={isSearching}
+                    className="mr-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl px-6 py-2 font-bold shadow-lg shadow-rose-900/30 transition-all active:scale-95"
+                  >
+                    {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : "SEARCH"}
+                  </Button>
+                </div>
+                {searchError && (
+                  <div className="absolute top-full left-0 mt-3 flex items-center gap-2 text-rose-300 text-sm bg-rose-950/80 border border-rose-500/30 px-4 py-2 rounded-xl animate-shake">
+                    <AlertTriangle className="w-4 h-4" /> {searchError}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Content Grid */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-1 -mx-2">
+              {(seedList.length === 0 && searchResults.length === 0 && !searchQuery) ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-500/50 space-y-4">
+                  <Music className="w-24 h-24 stroke-[1]" />
+                  <p className="text-xl font-light">Find your beat via search to start</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-20">
+                  {[...seedList, ...searchResults].map((v: any) => {
+                    const isActive = videoId === v.videoId;
+                    return (
+                      <button
+                        key={v.videoId}
+                        onClick={() => handlePickVideo(v.videoId)}
+                        className={`
+                            group relative text-left rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02]
+                            ${isActive ? 'ring-2 ring-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.4)] z-10' : 'hover:shadow-2xl hover:shadow-black/50 opacity-80 hover:opacity-100'}
+                          `}
+                      >
+                        {/* Card Bg */}
+                        <div className="absolute inset-0 bg-slate-900 border border-slate-800 group-hover:border-rose-500/30 transition-colors" />
+
+                        {/* Thumbnail */}
+                        <div className="relative aspect-video bg-black overflow-hidden">
+                          {v.thumbnail ? (
+                            <img src={v.thumbnail} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-slate-800"><Music className="w-8 h-8 text-slate-600" /></div>
+                          )}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[1px]">
+                            <Play className="w-12 h-12 fill-white text-white drop-shadow-lg" />
+                          </div>
+                        </div>
+
+                        {/* Info */}
+                        <div className="relative p-4">
+                          <h3 className="text-sm font-bold text-slate-100 line-clamp-2 mb-1 group-hover:text-rose-300 transition-colors">{v.title}</h3>
+                          <div className="flex items-center justify-between mt-2">
+                            <p className="text-xs text-slate-500 line-clamp-1">{v.channelTitle || 'Unknown'}</p>
+                            {v.hasLyrics && <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">LYRICS</span>}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer Tip */}
+            <div className="pb-2 text-center text-xs text-slate-500 font-mono">
+              Engine Ready • Powered by YouTube API • v2.0 Rose
+            </div>
+          </div>
+        )}
+
+
+        {/* --- Phase B: Theater / Play --- */}
+        {!(phase === 'idle' || phase === 'loading') && (
+          <div className="flex-1 relative flex flex-col">
+
+            {/* Top HUD */}
+            <div className="absolute top-0 inset-x-0 z-50 p-6 flex items-start justify-between bg-gradient-to-b from-black/90 to-transparent pointer-events-none">
+              <div className="pointer-events-auto">
+                <Button variant="ghost" onClick={() => setPhase('idle')} className="group text-slate-400 hover:text-white gap-2">
+                  <div className="bg-slate-800/80 p-1.5 rounded-lg group-hover:bg-rose-500 group-hover:text-white transition-colors border border-slate-700">
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">Back to Search</span>
+                </Button>
+              </div>
+
+              {/* Game Stats */}
+              <div className="flex gap-8">
+                <div className="text-right">
+                  <div className="text-[10px] uppercase font-bold text-rose-500 tracking-widest mb-1">Score</div>
+                  <div className="text-4xl font-black font-mono text-white text-shadow-neon">
+                    {(solvedCount * 100).toLocaleString()}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase font-bold text-emerald-500 tracking-widest mb-1">Lives</div>
+                  <div className="flex gap-1 bg-black/40 backdrop-blur rounded-lg p-2 border border-white/5">
+                    {Array.from({ length: MAX_TIMEOUTS }).map((_, i) => (
+                      <Heart key={i} className={`w-5 h-5 transition-all ${i < (MAX_TIMEOUTS - mistakes) ? 'fill-rose-500 text-rose-500 drop-shadow-glow' : 'fill-slate-800 text-slate-800'}`} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Center Stage: Interaction Area */}
+            <div className="flex-1 flex flex-col items-center justify-end pb-24 px-4 sm:px-12 relative z-40">
+
+              {/* STATUS OVERLAYS */}
+
+              {/* Ready / Waiting */}
+              {(phase === 'ready' || phase === 'waiting') && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50 animate-in fade-in">
+                  <div className="bg-slate-900/90 border border-slate-800 p-10 rounded-3xl text-center shadow-2xl max-w-md w-full relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 to-blue-500/10 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <div className="relative z-10 space-y-6">
+                      <div className="w-20 h-20 mx-auto rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-[0_0_30px_rgba(244,63,94,0.2)]">
+                        {phase === 'waiting' ? <Loader2 className="w-10 h-10 text-rose-400 animate-spin" /> : <Play className="w-10 h-10 text-rose-400 ml-1" />}
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-black text-white">{phase === 'waiting' ? 'Buffering...' : 'Ready to Start'}</h2>
+                        <p className="text-slate-400 text-sm mt-2">{displayTitle}</p>
+                      </div>
+                      {phase === 'ready' && (
+                        <Button onClick={startCountdownToFirstLine} className="w-full py-6 text-lg font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-900/40 rounded-xl">
+                          START GAME <span className="ml-2 text-xs font-normal opacity-70">(Space)</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
-              <div className="relative min-h-[3.25rem] md:min-h-[3.75rem] flex items-center justify-center">
-                <div className="text-2xl md:text-3xl font-bold text-slate-50 leading-tight break-words whitespace-pre-wrap text-left">
-                  {currentLine.text}
-                </div>
-                {phase === "countdown" && countdown != null && countdown > 0 && (
-                  <span
-                    className="absolute inset-0 flex items-center justify-center text-5xl md:text-6xl font-black text-blue-300 drop-shadow-[0_0_20px_rgba(96,165,250,0.45)] animate-pulse pointer-events-none"
-                    aria-live="assertive"
-                  >
+              {/* Countdown */}
+              {phase === 'countdown' && countdown !== null && (
+                <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+                  <div key={countdown} className="text-[15rem] leading-none font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 drop-shadow-[0_0_50px_rgba(255,255,255,0.5)] animate-in zoom-in-50 fade-out duration-700">
                     {countdown}
-                  </span>
-                )}
-              </div>
-              <div
-                className={`rounded-xl border px-3 py-3 font-mono text-lg md:text-xl whitespace-pre-wrap text-center ${shake ? "border-rose-500 animate-[shake_0.2s_ease-in-out] bg-slate-950/70" : "border-slate-800 bg-slate-950/70"
-                  } ${solvedEarly ? "opacity-60" : "text-slate-200"}`}
-                style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
-              >
-                {highlight ? (
-                  <span>
-                    <span className="text-emerald-300">{renderRomaji(highlight.correct)}</span>
-                    <span className={highlight.isMistake ? "bg-rose-600/60 text-white px-1 rounded" : "text-slate-400"}>{renderRomaji(highlight.next)}</span>
-                    <span className="text-slate-500">{renderRomaji(highlight.rest)}</span>
-                  </span>
-                ) : (
-                  renderRomaji(currentLine.romaji)
-                )}
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-end text-xs text-slate-400">
-                  <span className="font-mono text-slate-300">{(lineProgress * 100).toFixed(0)}%</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[11px] font-mono text-slate-500">{formatTime(lineStartSec)}</span>
-                  <div
-                    key={`progress-wrapper-${currentIdx}`}
-                    className="flex-1 h-1 bg-slate-900/70 rounded-full overflow-hidden"
-                  >
-                    <div
-                      className={`h-full will-change-transform origin-left shadow-[0_0_10px_rgba(96,165,250,0.45)] ${solvedEarly ? "bg-slate-600" : "bg-blue-400"}`}
-                      style={{
-                        width: "100%",
-                        transform: `scaleX(${lineProgress})`,
-                        transition: progressPhase === "animate" ? "transform 120ms linear" : "none",
-                      }}
-                      key={`progress-${currentIdx}`}
-                    />
                   </div>
-                  <span className="text-[11px] font-mono text-slate-500">{formatTime(lineEndSec)}</span>
                 </div>
-              </div>
+              )}
+
+              {/* Game Over / Cleared */}
+              {(phase === 'cleared' || phase === 'dead') && (
+                <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-500">
+                  <div className="bg-slate-950 border border-slate-800 p-10 rounded-[3rem] text-center max-w-lg w-full shadow-2xl relative overflow-hidden">
+                    <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${phase === 'cleared' ? 'from-emerald-500 to-teal-900' : 'from-rose-500 to-red-900'}`} />
+
+                    <div className="relative z-10 space-y-6">
+                      <div className={`mx-auto w-24 h-24 rounded-full flex items-center justify-center shadow-2xl ${phase === 'cleared' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-500'}`}>
+                        {phase === 'cleared' ? <Trophy className="w-12 h-12" /> : <Skull className="w-12 h-12" />}
+                      </div>
+                      <h2 className="text-4xl font-black text-white">{phase === 'cleared' ? 'STAGE CLEARED!' : 'GAME OVER'}</h2>
+
+                      <div className="grid grid-cols-2 gap-4 py-4">
+                        <div className="bg-white/5 p-4 rounded-2xl">
+                          <div className="text-[10px] text-slate-400 uppercase">Score</div>
+                          <div className="text-2xl font-mono font-bold">{(solvedCount * 100).toLocaleString()}</div>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-2xl">
+                          <div className="text-[10px] text-slate-400 uppercase">Miss</div>
+                          <div className="text-2xl font-mono font-bold text-rose-400">{mistakes}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <Button onClick={() => setPhase('idle')} variant="secondary" className="flex-1 h-12">Search</Button>
+                        <Button onClick={startRun} className="flex-1 h-12 bg-rose-600 hover:bg-rose-500 text-white font-bold">Replay</Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+
+              {/* ACTIVE GAMEPLAY AREA */}
+              {(phase === 'playing' || phase === 'countdown') && (
+                <div className="w-full max-w-5xl space-y-8 animate-in slide-in-from-bottom-10 fade-in duration-500">
+
+                  {/* Main Lyrics Display */}
+                  <div ref={lineSectionRef} onClick={() => inputRef.current?.focus()} className="relative text-center group cursor-text">
+
+                    {/* Next Line Preview */}
+                    {lines[currentIdx + 1] && (
+                      <div className="mb-4 opacity-50 transition-opacity group-hover:opacity-70">
+                        <p className="text-sm font-bold text-rose-400 uppercase tracking-widest mb-1">Next</p>
+                        <p className="text-xl text-slate-300 blur-[1px] group-hover:blur-0 transition-all">{lines[currentIdx + 1].text}</p>
+                      </div>
+                    )}
+
+                    {/* Current Line */}
+                    {currentLine && (
+                      <div className="bg-black/60 backdrop-blur-md rounded-3xl border border-white/10 p-8 shadow-2xl transition-all duration-200 hover:border-white/20 hover:bg-black/70">
+                        <div className="flex justify-center">
+                          <h3 className="text-3xl md:text-5xl font-black text-white mb-6 leading-tight drop-shadow-md text-left max-w-4xl w-fit">
+                            {currentLine.text}
+                          </h3>
+                        </div>
+
+                        {/* Romaji Input Area */}
+                        <div className={`
+                               relative block w-fit max-w-[90vw] md:max-w-4xl mx-auto px-6 py-6 rounded-2xl bg-slate-900/80 border-2 text-2xl md:text-3xl font-mono font-bold tracking-wider transition-transform break-all whitespace-pre-wrap leading-relaxed text-left
+                               ${shake ? 'border-rose-500 animate-shake' : 'border-slate-700 focus-within:border-emerald-500'}
+                               ${failGlow ? 'shadow-[0_0_30px_rgba(244,63,94,0.5)]' : 'shadow-xl'}
+                             `}>
+                          {highlight ? (
+                            <span className="inline">
+                              <span className="text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.6)] border-b-2 border-emerald-500/30">
+                                {renderRomaji(highlight.correct)}
+                              </span>
+                              <span className={`rounded px-0.5 ${highlight.isMistake ? "bg-rose-600 text-white" : "text-white bg-white/10"}`}>
+                                {renderRomaji(highlight.next)}
+                              </span>
+                              <span className="text-slate-600">{renderRomaji(highlight.rest)}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-500">{renderRomaji(currentLine.romaji)}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Progress Bar (Line specific) */}
+                    {currentLine && (
+                      <div className="mt-6 flex items-center gap-4 text-xs font-mono text-slate-400 max-w-2xl mx-auto">
+                        <span>{formatTime(lineStartSec)}</span>
+                        <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-[0_0_10px_rgba(52,211,153,0.5)] transition-transform duration-100 ease-linear origin-left"
+                            style={{ transform: `scaleX(${lineProgress})`, width: '100%' }}
+                          />
+                        </div>
+                        <span>{formatTime(lineEndSec)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Hidden Input Layer */}
               <input
                 ref={inputRef}
                 value={input}
                 onChange={(e) => handleInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault() }}
-                className="sr-only"
+                className="absolute opacity-0 pointer-events-none"
+                autoFocus
                 disabled={phase !== "playing"}
-                aria-label="ローマ字入力"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck="false"
+              />
+
+            </div>
+
+            {/* Bottom Progress (Song) */}
+            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-900/50">
+              <div
+                className="h-full bg-gradient-to-r from-rose-600 via-pink-500 to-purple-600 shadow-[0_0_15px_rgba(244,63,94,0.6)] transition-all duration-500 ease-out"
+                style={{ width: `${currentRatio * 100}%` }}
               />
             </div>
-          )}
-
-          {phase === "cleared" && (
-            <div className="flex flex-col items-start gap-3 text-emerald-100">
-              <CheckCircle2 className="w-8 h-8" />
-              <p className="text-lg font-semibold">クリア！全行を打ち切りました。</p>
-              <div className="text-sm text-slate-300">ミス {mistakes} / ライン {lines.length}</div>
-              <Button onClick={startRun}>もう一度</Button>
-            </div>
-          )}
-
-          {phase === "dead" && (
-            <div className="flex flex-col items-start gap-3 text-amber-100">
-              <Skull className="w-8 h-8" />
-              <p className="text-lg font-semibold">ライフが尽きました。</p>
-              <div className="text-sm text-slate-300">ミス {mistakes} / ライン {solvedCount} / {lines.length}</div>
-              <Button onClick={startRun}>再挑戦</Button>
-            </div>
-          )}
-
-          {phase === "idle" && (
-            <div className="text-sm text-slate-300">
-              曲を選ぶと自動で歌詞を取得します。手入力の場合は Enter で取得してください。バックエンドは {`{ title, lines: SuddenLyricLine[] }`} を返します。
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 space-y-4">
-          <div className="space-y-2 pt-2 border-t border-slate-800">
-            <div className="flex items-center justify-between gap-2">
-              <label className="text-sm font-semibold text-slate-200">動画検索</label>
-              <span className="text-[11px] text-slate-400">キーワードで探してIDをセット</span>
-            </div>
-            <div className="flex flex-col gap-3">
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="曲名・アーティスト"
-                className="w-full rounded-xl bg-slate-800/60 border border-slate-700 px-4 py-2 text-slate-100 focus:outline-none focus:border-rose-400"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    void handleSearch()
-                  }
-                }}
-              />
-              <Button onClick={() => void handleSearch()} disabled={!searchQuery.trim() || isSearching}>
-                {isSearching ? (
-                  <span className="flex items-center gap-2 text-sm">
-                    <Loader2 className="w-4 h-4 animate-spin" /> 検索中
-                  </span>
-                ) : (
-                  "動画検索"
-                )}
-              </Button>
-            </div>
-            {searchError && (
-              <div className="flex items-center gap-2 text-amber-200 text-sm bg-amber-500/10 border border-amber-500/40 rounded-xl px-3 py-2">
-                <AlertTriangle className="w-4 h-4" /> {searchError}
-              </div>
-            )}
-            {(seedList.length > 0 || searchResults.length > 0) && (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-1 gap-3 max-h-[420px] overflow-y-auto pr-1">
-                {seedList.map((v) => (
-                  <button
-                    key={`seed-${v.videoId}`}
-                    className={`text-left rounded-xl border bg-slate-900/70 hover:bg-slate-800/80 transition flex flex-col h-full ${videoId === v.videoId ? "border-rose-500/60" : "border-slate-800"
-                      }`}
-                    onClick={() => handlePickVideo(v.videoId)}
-                  >
-                    <div className="p-3 space-y-1">
-                      <p className="text-sm font-semibold text-slate-100 line-clamp-2">{v.title}</p>
-                      <p className="text-xs text-slate-400 line-clamp-1">歌詞付き</p>
-                      <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-full bg-slate-800/80 text-slate-200">これで遊ぶ</span>
-                    </div>
-                  </button>
-                ))}
-                {searchResults.map((v) => (
-                  <button
-                    key={v.videoId}
-                    className={`text-left rounded-xl border bg-slate-900/70 hover:bg-slate-800/80 transition flex flex-col h-full ${videoId === v.videoId ? "border-rose-500/60" : "border-slate-800"
-                      }`}
-                    onClick={() => handlePickVideo(v.videoId)}
-                  >
-                    {v.thumbnail && (
-                      <img src={v.thumbnail} alt={v.title} className="w-full h-28 object-cover rounded-t-xl border-b border-slate-800" />
-                    )}
-                    <div className="p-3 space-y-1">
-                      <p className="text-sm font-semibold text-slate-100 line-clamp-2">{v.title}</p>
-                      <p className="text-xs text-slate-400 line-clamp-1">{v.channelTitle}</p>
-                      {v.publishedAt && <p className="text-[11px] text-slate-500">{new Date(v.publishedAt).toLocaleDateString()}</p>}
-                      <span className="inline-flex items-center text-[11px] px-2 py-1 rounded-full bg-slate-800/80 text-slate-200">これで遊ぶ</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
-
-          <p className="text-xs text-slate-400">
-            バックエンドで字幕を取得してローマ字付きで返してください。エンドポイント例: /api/sudden-death/captions?videoId=xxx （レスポンス: {`{ title, lines }`})
-          </p>
-        </div>
+        )}
       </div>
     </div>
   )
