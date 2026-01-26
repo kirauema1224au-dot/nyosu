@@ -32,12 +32,13 @@ export function SuddenDeathGame() {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [input, setInput] = useState("")
   const [mistakes, setMistakes] = useState(0)
+  const [missedLines, setMissedLines] = useState(0)
+  const [livesLost, setLivesLost] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [solvedCount, setSolvedCount] = useState(0)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [countdownActive, setCountdownActive] = useState(false)
   const [solvedEarly, setSolvedEarly] = useState(false)
-  const [progressPhase, setProgressPhase] = useState<"reset" | "animate">("reset")
   const [playerStarted, setPlayerStarted] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const playerRef = useRef<any>(null)
@@ -55,12 +56,13 @@ export function SuddenDeathGame() {
   }, [mistakes])
   const lineSectionRef = useRef<HTMLDivElement | null>(null)
   const manualStartedRef = useRef(false)
-  const lineProgressAnchorRef = useRef(0)
+  const lineActivatedAtMsRef = useRef(0)
   const introSkippedRef = useRef(false)
   const pendingIntroSkipRef = useRef(false)
   const startSecRef = useRef(0)
   const focusAnchorRef = useRef<HTMLDivElement | null>(null)
   const countdownSkippedRef = useRef(false)
+  const lastPenaltyFromIdxRef = useRef<number | null>(null) // 同じ行での多重ライフ減少防止
 
   const currentLine = lines[currentIdx] ?? null
 
@@ -225,6 +227,16 @@ export function SuddenDeathGame() {
           if (nextIdx === -1) {
             setPhase("cleared")
           } else if (nextIdx !== currentIdx) {
+            const missedCount = Math.max(0, nextIdx - currentIdx)
+            const penalizeCount = solvedEarly ? Math.max(0, missedCount - 1) : missedCount
+            if (penalizeCount > 0) {
+              // 同じ行からの多重ペナルティを防ぐ
+              if (lastPenaltyFromIdxRef.current !== currentIdx) {
+                setLivesLost((l) => Math.min(MAX_TIMEOUTS, l + 1))
+                lastPenaltyFromIdxRef.current = currentIdx
+              }
+              setMissedLines((m) => Math.min(MAX_TIMEOUTS, m + penalizeCount))
+            }
             setSolvedEarly(false)
             setCurrentIdx(nextIdx)
             setInput("")
@@ -276,10 +288,15 @@ export function SuddenDeathGame() {
 
   const renderRomaji = useCallback((s: string) => s.replace(/-/g, "\u2011"), [])
 
-  const handleSkipLine = useCallback((opts?: { seekToNextStart?: boolean }) => {
+  const handleSkipLine = useCallback((opts?: { seekToNextStart?: boolean; penalize?: boolean }) => {
     if (phase !== "playing" && phase !== "waiting") return
     if (!lines.length) return
     const nextIdx = currentIdx + 1
+    const shouldPenalize = opts?.penalize === true && !solvedEarly // 明示指定のみライフ減少、解答済みなら減らさない
+    if (shouldPenalize) {
+      setMissedLines((m) => Math.min(MAX_TIMEOUTS, m + 1))
+      setLivesLost((l) => Math.min(MAX_TIMEOUTS, l + 1))
+    }
     setInput("")
     setSolvedEarly(false)
     if (nextIdx >= lines.length) {
@@ -300,40 +317,37 @@ export function SuddenDeathGame() {
   }, [phase, lines, currentIdx, offsetMs])
 
   const lineProgress = useMemo(() => {
-    if (phase !== "playing") return 0
+    // 行の開始〜終了の範囲で 0→1 にする（開始前は0、終了後は1）
+    if (!(phase === "playing" || phase === "waiting" || phase === "countdown")) return 0
     if (!currentLine) return 0
-    const span = currentLine.endMs - currentLine.startMs
-    if (span <= 0) return 1
+    const startMs = Number.isFinite(currentLine.startMs) ? currentLine.startMs : 0
+    const endMs = Number.isFinite(currentLine.endMs) ? currentLine.endMs : startMs
+    const span = endMs - startMs
     const adjusted = currentTime * 1000 + offsetMs
-    const anchor = lineProgressAnchorRef.current || currentLine.startMs
-    if (adjusted < anchor) return 0
-    const t = (adjusted - anchor) / span
+
+    // 行開始前: アクティブ化時刻→startMs を 0→1 で進める（行切り替えで視覚的にリセット）
+    if (adjusted <= startMs) {
+      const warmupStart = lineActivatedAtMsRef.current || 0
+      const warmupSpan = startMs - warmupStart
+      if (warmupSpan <= 0) return 0
+      const warmupT = (adjusted - warmupStart) / warmupSpan
+      return Math.min(1, Math.max(0, warmupT))
+    }
+
+    // 行開始後: startMs→endMs の範囲で 0→1
+    if (span <= 0) return 1
+    const t = (adjusted - startMs) / span
     return Math.min(1, Math.max(0, t))
   }, [phase, currentLine, currentTime, offsetMs])
 
   const lineStartSec = currentLine ? currentLine.startMs / 1000 : 0
   const lineEndSec = currentLine ? currentLine.endMs / 1000 : 0
 
+  // 行がアクティブになった時点の実時間を記録し、ゲージのリセット基準に使う
   useEffect(() => {
-    if (!currentLine) return
-    // reset anchor to the current line's start so gauge always starts at 0
-    lineProgressAnchorRef.current = currentLine.startMs
-    setProgressPhase("reset")
-    // 2フレーム後にアニメーションを有効化
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setProgressPhase("animate"))
-    })
-    return () => cancelAnimationFrame(id)
-  }, [currentIdx, currentLine])
-
-  // 行タイマーが100%に達したら自動で次行へ（waiting 中でも進める）
-  useEffect(() => {
-    if (!currentLine) return
-    if ((phase === "playing" || phase === "waiting") && lineProgress >= 1) {
-      if (phase === "waiting") setPhase("playing")
-      handleSkipLine()
-    }
-  }, [phase, currentLine, lineProgress, handleSkipLine])
+    const adjustedNow = currentTime * 1000 + offsetMs
+    lineActivatedAtMsRef.current = Number.isFinite(adjustedNow) ? adjustedNow : 0
+  }, [currentIdx, offsetMs])
 
   const handleReset = useCallback(() => {
     if (!lines.length) return
@@ -342,6 +356,8 @@ export function SuddenDeathGame() {
     setCurrentIdx(0)
     setInput("")
     setMistakes(0)
+    setMissedLines(0)
+    setLivesLost(0)
     setSolvedCount(0)
     setError(null)
     setCountdown(null)
@@ -374,9 +390,13 @@ export function SuddenDeathGame() {
     setCurrentIdx(0)
     setInput("")
     setMistakes(0)
+    setMissedLines(0)
+    setLivesLost(0)
     setSolvedCount(0)
     setError(null)
     startSecRef.current = 0
+    lineActivatedAtMsRef.current = 0
+    lastPenaltyFromIdxRef.current = null
   }
 
   const handleFetch = async (idOverride?: string) => {
@@ -502,6 +522,9 @@ export function SuddenDeathGame() {
     setCurrentIdx(0)
     setInput("")
     setPhase("waiting")
+    setMissedLines(0)
+    setLivesLost(0)
+    lineActivatedAtMsRef.current = 0
     try {
       playerRef.current?.seekTo(0, true)
       playerRef.current?.unMute?.()
@@ -731,7 +754,7 @@ export function SuddenDeathGame() {
         }
         const introDone = introSkippedRef.current || !beforeFirstLine
         if ((phase === "playing" || phase === "waiting") && introDone) {
-          handleSkipLine({ seekToNextStart: true })
+          handleSkipLine({ seekToNextStart: true, penalize: false })
           return
         }
         if (phase === "playing") {
@@ -741,7 +764,7 @@ export function SuddenDeathGame() {
       }
       if (phase === "playing" && e.code === "Escape") {
         e.preventDefault()
-        handleSkipLine()
+        handleSkipLine({ seekToNextStart: true, penalize: false })
       }
     }
     document.addEventListener("keydown", onKey, { capture: true })
@@ -755,7 +778,6 @@ export function SuddenDeathGame() {
     return `${m}:${s.toString().padStart(2, "0")}`
   }
 
-  const currentRatio = duration ? Math.min(1, Math.max(0, currentTime / duration)) : 0
   const displayTitle = videoTitle || (videoId ? `ID: ${videoId}` : "曲タイトル未取得")
 
   useEffect(() => {
@@ -939,7 +961,7 @@ export function SuddenDeathGame() {
                   <div className="text-[10px] uppercase font-bold text-emerald-500 tracking-widest mb-1">Lives</div>
                   <div className="flex gap-1 bg-black/40 backdrop-blur rounded-lg p-2 border border-white/5">
                     {Array.from({ length: MAX_TIMEOUTS }).map((_, i) => (
-                      <Heart key={i} className={`w-5 h-5 transition-all ${i < (MAX_TIMEOUTS - mistakes) ? 'fill-rose-500 text-rose-500 drop-shadow-glow' : 'fill-slate-800 text-slate-800'}`} />
+                      <Heart key={i} className={`w-5 h-5 transition-all ${i < (MAX_TIMEOUTS - livesLost) ? 'fill-rose-500 text-rose-500 drop-shadow-glow' : 'fill-slate-800 text-slate-800'}`} />
                     ))}
                   </div>
                 </div>
@@ -976,8 +998,8 @@ export function SuddenDeathGame() {
                           <div className="text-2xl font-mono font-bold">{(solvedCount * 100).toLocaleString()}</div>
                         </div>
                         <div className="bg-white/5 p-4 rounded-2xl">
-                          <div className="text-[10px] text-slate-400 uppercase">Miss</div>
-                          <div className="text-2xl font-mono font-bold text-rose-400">{mistakes}</div>
+                          <div className="text-[10px] text-slate-400 uppercase">Missed Lines</div>
+                          <div className="text-2xl font-mono font-bold text-rose-400">{missedLines}</div>
                         </div>
                       </div>
 
@@ -1081,13 +1103,6 @@ export function SuddenDeathGame() {
 
             </div>
 
-            {/* Bottom Progress (Song) */}
-            <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-900/50">
-              <div
-                className="h-full bg-gradient-to-r from-rose-600 via-pink-500 to-purple-600 shadow-[0_0_15px_rgba(244,63,94,0.6)] transition-all duration-500 ease-out"
-                style={{ width: `${currentRatio * 100}%` }}
-              />
-            </div>
           </div>
         )}
       </div>
