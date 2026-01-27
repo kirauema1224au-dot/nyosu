@@ -887,6 +887,10 @@ export function SuddenDeathGame() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-20">
                   {[...seedList, ...searchResults].map((v: any) => {
                     const isActive = videoId === v.videoId;
+                    const fallbackThumb = isValidVideoId(v.videoId)
+                      ? `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`
+                      : null
+                    const thumb = v.thumbnail || fallbackThumb
                     return (
                       <button
                         key={v.videoId}
@@ -901,8 +905,13 @@ export function SuddenDeathGame() {
 
                         {/* Thumbnail */}
                         <div className="relative aspect-video bg-black overflow-hidden">
-                          {v.thumbnail ? (
-                            <img src={v.thumbnail} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                          {thumb ? (
+                            <img
+                              src={thumb}
+                              alt={v.title || ''}
+                              loading="lazy"
+                              className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                            />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-slate-800"><Music className="w-8 h-8 text-slate-600" /></div>
                           )}
