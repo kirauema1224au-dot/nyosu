@@ -12,7 +12,7 @@ export type Prompt = {
 // ★ seedPrompts の import は削除
 // import { seedPrompts } from '../seed/seedPrompts'
 
-const API_BASE = 'http://localhost:3001'
+const API_BASE = (import.meta as any)?.env?.VITE_API_BASE_URL ?? 'http://localhost:3001'
 
 /**
  * バックエンドからお題一覧を取得（APIのみ／失敗したらエラー）
