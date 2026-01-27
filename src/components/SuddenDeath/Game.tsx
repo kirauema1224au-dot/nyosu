@@ -835,7 +835,7 @@ export function SuddenDeathGame() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-rose-500/40 blur-xl rounded-full animate-pulse" />
                   <div className="relative p-4 bg-slate-900/80 rounded-2xl border border-rose-500/30 shadow-[0_0_20px_rgba(244,63,94,0.2)]">
-                    <Zap className="w-8 h-8 text-rose-400 fill-rose-400/20" />
+                    <Music className="w-8 h-8 text-rose-400 fill-rose-400/20" />
                   </div>
                 </div>
                 <div className="text-center md:text-left">
