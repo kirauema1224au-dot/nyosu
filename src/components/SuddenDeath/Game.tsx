@@ -36,6 +36,7 @@ export function SuddenDeathGame() {
   const [livesLost, setLivesLost] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [solvedCount, setSolvedCount] = useState(0)
+  const solvedSetRef = useRef<Set<number>>(new Set())
   const [countdown, setCountdown] = useState<number | null>(null)
   const [countdownActive, setCountdownActive] = useState(false)
   const [solvedEarly, setSolvedEarly] = useState(false)
@@ -228,7 +229,12 @@ export function SuddenDeathGame() {
             setPhase("cleared")
           } else if (nextIdx !== currentIdx) {
             const missedCount = Math.max(0, nextIdx - currentIdx)
-            const penalizeCount = solvedEarly ? Math.max(0, missedCount - 1) : missedCount
+            // 未解決の行だけをペナルティ対象にする
+            let unresolved = 0
+            for (let i = currentIdx; i < nextIdx; i++) {
+              if (!solvedSetRef.current.has(i)) unresolved += 1
+            }
+            const penalizeCount = solvedEarly ? Math.max(0, unresolved - 1) : unresolved
             if (penalizeCount > 0) {
               // 同じ行からの多重ペナルティを防ぐ
               if (lastPenaltyFromIdxRef.current !== currentIdx) {
@@ -359,6 +365,7 @@ export function SuddenDeathGame() {
     setMissedLines(0)
     setLivesLost(0)
     setSolvedCount(0)
+    solvedSetRef.current.clear()
     setError(null)
     setCountdown(null)
     setCountdownActive(false)
@@ -393,6 +400,7 @@ export function SuddenDeathGame() {
     setMissedLines(0)
     setLivesLost(0)
     setSolvedCount(0)
+    solvedSetRef.current.clear()
     setError(null)
     startSecRef.current = 0
     lineActivatedAtMsRef.current = 0
@@ -519,6 +527,7 @@ export function SuddenDeathGame() {
     setCountdown(null)
     setCountdownActive(false)
     setSolvedEarly(false)
+    solvedSetRef.current.clear()
     setCurrentIdx(0)
     setInput("")
     setPhase("waiting")
@@ -539,6 +548,7 @@ export function SuddenDeathGame() {
   const handleSolved = () => {
     const nextIdx = currentIdx + 1
     setSolvedCount((c) => c + 1)
+    solvedSetRef.current.add(currentIdx)
     // Lock input until the line's time window ends
     setSolvedEarly(true)
     setInput("")
@@ -897,6 +907,7 @@ export function SuddenDeathGame() {
                         onClick={() => handlePickVideo(v.videoId)}
                         className={`
                             group relative text-left rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02]
+                            flex flex-col h-full
                             ${isActive ? 'ring-2 ring-rose-500 shadow-[0_0_30px_rgba(244,63,94,0.4)] z-10' : 'hover:shadow-2xl hover:shadow-black/50 opacity-80 hover:opacity-100'}
                           `}
                       >
@@ -921,11 +932,17 @@ export function SuddenDeathGame() {
                         </div>
 
                         {/* Info */}
-                        <div className="relative p-4">
-                          <h3 className="text-sm font-bold text-slate-100 line-clamp-2 mb-1 group-hover:text-rose-300 transition-colors">{v.title}</h3>
-                          <div className="flex items-center justify-between mt-2">
+                        <div className="relative p-4 flex flex-col gap-2 min-h-[130px]">
+                          <h3 className="text-sm font-bold text-slate-100 line-clamp-2 group-hover:text-rose-300 transition-colors min-h-[42px]">
+                            {v.title}
+                          </h3>
+                          <div className="flex items-center justify-between mt-auto">
                             <p className="text-xs text-slate-500 line-clamp-1">{v.channelTitle || 'Unknown'}</p>
-                            {v.hasLyrics && <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">LYRICS</span>}
+                            {v.hasLyrics && (
+                              <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
+                                LYRICS
+                              </span>
+                            )}
                           </div>
                         </div>
                       </button>
